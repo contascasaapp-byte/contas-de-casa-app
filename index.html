@@ -781,15 +781,64 @@ function renderGer() {
   else {
     gp.innerHTML = dados.pessoas.map((p,i) => {
       const av = AV_COLORS[i % AV_COLORS.length];
+      const avatar = p.foto
+        ? `<img src="${p.foto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;cursor:pointer" onclick="escolherFoto(${p.id})" title="Trocar foto"/>`
+        : `<div class="pessoa-avatar ${av}" style="margin:0;width:36px;height:36px;font-size:13px;cursor:pointer" onclick="escolherFoto(${p.id})" title="Adicionar foto">${p.nome.charAt(0).toUpperCase()}</div>`;
       return `<div class="ger-card">
         <div style="display:flex;align-items:center;gap:10px">
-          <div class="pessoa-avatar ${av}" style="margin:0;width:30px;height:30px;font-size:11px">${p.nome.charAt(0).toUpperCase()}</div>
-          <span class="ger-nome">${p.nome}</span>
+          ${avatar}
+          <div>
+            <span class="ger-nome">${p.nome}</span>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px">${p.foto ? '📷 Trocar foto' : '📷 Adicionar foto'}</div>
+          </div>
         </div>
         <div class="ger-actions"><button class="btn-ger-del" onclick="deletarPessoa(${p.id})">🗑</button></div>
       </div>`;
     }).join('');
   }
+}
+
+// Input de arquivo oculto para foto
+if (!document.getElementById('input-foto-hidden')) {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'input-foto-hidden';
+  inp.style.display = 'none';
+  document.body.appendChild(inp);
+}
+
+function escolherFoto(pessoaId) {
+  const inp = document.getElementById('input-foto-hidden');
+  inp.onchange = function() {
+    const file = inp.files[0];
+    if (!file) return;
+    // Reduz tamanho da imagem antes de salvar
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const max = 200;
+        let w = img.width, h = img.height;
+        if (w > h) { if (w > max) { h = h*max/w; w = max; } }
+        else { if (h > max) { w = w*max/h; h = max; } }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const fotoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        const p = dados.pessoas.find(p => p.id === pessoaId);
+        if (p) {
+          p.foto = fotoBase64;
+          save();
+          render();
+          renderGer();
+          showToast('📷 Foto atualizada!');
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    inp.value = '';
+  };
+  inp.click();
 }
 
 function renderHistorico() {
@@ -803,7 +852,10 @@ function renderHistorico() {
       <div class="hist-body">
         ${(h.contas||[]).map(c=>`<div class="hist-row"><span>${c.icon||'💡'} ${c.nome}</span><span>${fmt(c.valor)}</span></div>`).join('')}
         <div class="hist-row" style="font-weight:700"><span>Cada um pagou</span><span>${fmt(h.cada)}</span></div>
-        <div class="hist-pessoas">${(h.pessoas||[]).map(p=>`<span class="hist-pessoa-chip ${p.pago?'chip-ok':'chip-nao'}">${p.nome} ${p.pago?'✅':'⏳'}</span>`).join('')}</div>
+        <div class="hist-pessoas">${(h.pessoas||[]).map(p=>{
+          const fotoHtml = p.foto ? `<img src="${p.foto}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px"/>` : '';
+          return `<span class="hist-pessoa-chip ${p.pago?'chip-ok':'chip-nao'}">${fotoHtml}${p.nome} ${p.pago?'✅':'⏳'}</span>`;
+        }).join('')}</div>
       </div>
     </div>`).join('');
 }
@@ -905,7 +957,8 @@ function fecharMes() {
   const pessoasComuns = dados.pessoas.filter(p => !pessoasExclusivas.has(p.id));
   const totalComum = dados.contas.reduce((s,c) => (!c.responsaveis || c.responsaveis.length !== 1) ? s+c.valor : s, 0);
   const cada = pessoasComuns.length > 0 ? totalComum / pessoasComuns.length : 0;
-  dados.historico.push({ mes:mesNome, total, cada, contas:dados.contas.map(c=>({...c})), pessoas:dados.pessoas.map(p=>({...p, valor:getValorPessoa(p.id)})), data:new Date().toISOString() });
+  const fotos = window.fbFotos || {};
+  dados.historico.push({ mes:mesNome, total, cada, contas:dados.contas.map(c=>({...c})), pessoas:dados.pessoas.map(p=>({...p, valor:getValorPessoa(p.id), foto: p.foto || fotos[p.id] || null})), data:new Date().toISOString() });
   dados.mesFechado = true;
   save(); render(); renderGer();
   showToast('🔒 Mês fechado! Clique em "Iniciar Novo Mês" para continuar.');
