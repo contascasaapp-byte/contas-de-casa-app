@@ -224,13 +224,26 @@ async function iniciarCasa(id, salvarLocal) {
   });
 }
 
+let pendingSave = null;
+
 window.saveToFirebase = async function(data) {
-  if (!docRef) { setTimeout(() => window.saveToFirebase(data), 500); return; }
-  if (salvando) return;
+  // Guarda sempre o dado mais recente
+  pendingSave = JSON.parse(JSON.stringify(data));
+  
+  if (!docRef) { setTimeout(() => { if(pendingSave) window.saveToFirebase(pendingSave); }, 800); return; }
+  if (salvando) return; // vai pegar o pendingSave quando terminar
+
   try {
     salvando = true;
     ultimoSave = Date.now();
-    const dataParaSalvar = JSON.parse(JSON.stringify(data));
+    
+    // Mostrar indicador de salvando
+    const toast = document.getElementById('toast');
+    if (toast) { toast.textContent = '💾 Salvando...'; toast.classList.add('show'); }
+
+    const dataParaSalvar = pendingSave;
+    pendingSave = null;
+
     const fotosMap = {};
     dataParaSalvar.pessoas = dataParaSalvar.pessoas.map(p => {
       if (p.foto) { fotosMap[p.id] = p.foto; delete p.foto; }
@@ -247,8 +260,15 @@ window.saveToFirebase = async function(data) {
       await setDoc(fotosRef, { fotos: novasFotos }, { merge: true });
       window.fbFotos = novasFotos;
     }
+    // Confirmar salvo
+    if (toast) { toast.textContent = '✅ Salvo!'; setTimeout(() => toast.classList.remove('show'), 1500); }
+    
+    // Se teve novo save durante o processo, salva de novo
+    if (pendingSave) { window.saveToFirebase(pendingSave); }
   } catch(e) {
     console.log('Firebase save error:', e);
+    const toast = document.getElementById('toast');
+    if (toast) { toast.textContent = '❌ Erro ao salvar!'; setTimeout(() => toast.classList.remove('show'), 2000); }
   } finally {
     salvando = false;
   }
@@ -624,16 +644,33 @@ function load() {
   if (dados.mesFechado === undefined) dados.mesFechado = false;
   if (!dados.pessoas) dados.pessoas = [];
   if (!dados.contas) dados.contas = [];
+  // Se fotos ainda não carregaram, tenta de novo em 2 segundos
+  if (!window.fbFotos) {
+    setTimeout(() => {
+      const fotos = window.fbFotos || {};
+      let alterou = false;
+      dados.pessoas = dados.pessoas.map(p => {
+        if (fotos[p.id] && !p.foto) { p.foto = fotos[p.id]; alterou = true; }
+        return p;
+      });
+      if (alterou) { render(); renderGer(); }
+    }, 2000);
+  }
 }
 
 window.syncFromCloud = function(newDados) {
   if (!newDados) return;
-  // Preserva nomeCasa se o novo dado vier sem ele
   if (!newDados.nomeCasa && dados.nomeCasa) newDados.nomeCasa = dados.nomeCasa;
   dados = newDados;
   if (!dados.historico) dados.historico = [];
   if (!dados.pessoas) dados.pessoas = [];
   if (!dados.contas) dados.contas = [];
+  // Reaplicar fotos do Firebase
+  const fotos = window.fbFotos || {};
+  dados.pessoas = dados.pessoas.map(p => {
+    if (fotos[p.id]) p.foto = fotos[p.id];
+    return p;
+  });
   render(); renderGer();
 };
 
