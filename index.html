@@ -191,9 +191,15 @@ async function iniciarCasa(id, salvarLocal) {
     if (primeiraVez) {
       primeiraVez = false;
       window.fbReady = true;
-      document.dispatchEvent(new Event('firebase-ready'));
+      // Dispara após DOM estar pronto
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => document.dispatchEvent(new Event('firebase-ready')));
+      } else {
+        document.dispatchEvent(new Event('firebase-ready'));
+      }
       return;
     }
+    // Sincronização em tempo real de outros dispositivos
     if (Date.now() - ultimoSave > 3000 && window.fbData['dados']) {
       try {
         const nd = JSON.parse(window.fbData['dados']);
@@ -203,7 +209,11 @@ async function iniciarCasa(id, salvarLocal) {
   }, () => {
     window.fbData = {};
     window.fbReady = true;
-    document.dispatchEvent(new Event('firebase-ready'));
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => document.dispatchEvent(new Event('firebase-ready')));
+    } else {
+      document.dispatchEvent(new Event('firebase-ready'));
+    }
   });
 
   onSnapshot(fotosRef, (snap) => {
@@ -343,10 +353,7 @@ async function verificarSenhaLink(id) {
       <h1 id="header-titulo">🏠 Contas de Casa</h1>
       <div class="header-sub" id="header-mes">—</div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <button onclick="compartilharLink()" style="background:#ffffff22;border:1px solid #ffffff44;color:white;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer">🔗 Compartilhar</button>
-      <div class="mes-badge" id="mes-badge">—</div>
-    </div>
+    <div class="mes-badge" id="mes-badge">—</div>
   </div>
 </div>
 
@@ -420,6 +427,9 @@ async function verificarSenhaLink(id) {
         <button class="btn-add" onclick="abrirModalPessoa()">+ Adicionar</button>
       </div>
       <div id="ger-pessoas"></div>
+    </div>
+    <div class="section">
+      <button onclick="compartilharLink()" style="width:100%;background:linear-gradient(90deg,#0f3460,#1e3a5f);color:white;border:2px solid #93c5fd;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:0">🔗 Compartilhar link desta casa</button>
     </div>
     <div class="section">
       <div class="section-title" style="margin-bottom:10px">🔒 Segurança</div>
