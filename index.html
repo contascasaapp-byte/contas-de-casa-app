@@ -158,10 +158,10 @@ const urlParams = new URLSearchParams(window.location.search);
 const casaIdUrl = urlParams.get('casa');
 
 if (casaIdUrl) {
-  // Veio por link — verifica senha antes se necessário
+  // Veio por link — salva no localStorage E verifica senha se necessário
   verificarSenhaLink(casaIdUrl);
 } else {
-  // Acesso direto ao site — verifica localStorage (usuário que já criou uma casa)
+  // Acesso direto ao site — verifica localStorage
   const casaIdLocal = localStorage.getItem('contas_casa_id');
   if (casaIdLocal) {
     iniciarCasa(casaIdLocal, true);
@@ -299,8 +299,8 @@ async function verificarSenhaLink(id) {
       }
     }
   } catch(e) {}
-  // Sem senha — entra direto
-  iniciarCasa(id, false);
+  // Sem senha — entra direto e salva no localStorage
+  iniciarCasa(id, true);
 }
 </script>
 </head>
