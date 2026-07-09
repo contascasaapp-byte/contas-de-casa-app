@@ -158,8 +158,8 @@ const urlParams = new URLSearchParams(window.location.search);
 const casaIdUrl = urlParams.get('casa');
 
 if (casaIdUrl) {
-  // Veio por link de cliente — entra direto, sem salvar no localStorage
-  iniciarCasa(casaIdUrl, false);
+  // Veio por link — verifica senha antes se necessário
+  verificarSenhaLink(casaIdUrl);
 } else {
   // Acesso direto ao site — verifica localStorage (usuário que já criou uma casa)
   const casaIdLocal = localStorage.getItem('contas_casa_id');
@@ -276,6 +276,32 @@ function mostrarEntrada() {
   const el = document.getElementById('entrada-overlay');
   if (el) el.style.display = 'flex';
 }
+
+async function verificarSenhaLink(id) {
+  try {
+    const snap = await getDoc(doc(db, 'casas', id.toUpperCase(), 'dados', 'principal'));
+    if (snap.exists()) {
+      let parsed = {};
+      try { parsed = JSON.parse(snap.data().dados || '{}'); } catch {}
+      if (parsed.senha) {
+        // Casa tem senha — mostra tela de senha
+        window.setCasaIdPendente(id.toUpperCase());
+        document.addEventListener('DOMContentLoaded', () => {
+          mostrarEntrada();
+          document.getElementById('modo-entrar').style.display = 'none';
+          document.getElementById('modo-criar').style.display = 'none';
+          document.getElementById('modo-senha').style.display = 'block';
+        });
+        window.fbData = {};
+        window.fbReady = true;
+        document.dispatchEvent(new Event('firebase-ready'));
+        return;
+      }
+    }
+  } catch(e) {}
+  // Sem senha — entra direto
+  iniciarCasa(id, false);
+}
 </script>
 </head>
 <body>
@@ -295,7 +321,17 @@ function mostrarEntrada() {
 
     <div id="modo-criar" style="display:none">
       <input class="entrada-input" type="text" id="input-casa-nome" placeholder="Nome da sua casa" style="letter-spacing:0;text-align:left"/>
+      <input class="entrada-input" type="password" id="input-casa-senha" placeholder="Senha (opcional)" style="letter-spacing:0;text-align:left"/>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:12px;margin-top:-8px">Deixe em branco para acesso livre</div>
       <button class="entrada-btn" onclick="criarCasa()">🏠 Criar casa</button>
+      <button class="entrada-btn-criar" onclick="mostrarEntrar()">← Voltar</button>
+    </div>
+
+    <div id="modo-senha" style="display:none">
+      <div style="font-size:13px;color:#64748b;margin-bottom:16px">🔒 Esta casa é protegida por senha</div>
+      <input class="entrada-input" type="password" id="input-senha-acesso" placeholder="Digite a senha"/>
+      <div class="entrada-erro" id="senha-erro">Senha incorreta. Tente novamente.</div>
+      <button class="entrada-btn" onclick="verificarSenha()">🔓 Entrar</button>
       <button class="entrada-btn-criar" onclick="mostrarEntrar()">← Voltar</button>
     </div>
   </div>
@@ -304,10 +340,13 @@ function mostrarEntrada() {
 <div class="header">
   <div class="header-inner">
     <div>
-      <h1>🏠 Contas de Casa</h1>
+      <h1 id="header-titulo">🏠 Contas de Casa</h1>
       <div class="header-sub" id="header-mes">—</div>
     </div>
-    <div class="mes-badge" id="mes-badge">—</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button onclick="compartilharLink()" style="background:#ffffff22;border:1px solid #ffffff44;color:white;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer">🔗 Compartilhar</button>
+      <div class="mes-badge" id="mes-badge">—</div>
+    </div>
   </div>
 </div>
 
@@ -349,6 +388,11 @@ function mostrarEntrada() {
       <div id="contas-lista"></div>
     </div>
 
+    <div id="pendentes-box" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:#c2410c;margin-bottom:8px">⚠️ Ainda não pagaram</div>
+      <div id="pendentes-lista" style="font-size:12px;color:#9a3412;line-height:1.8"></div>
+    </div>
+
     <div class="section">
       <div class="section-header">
         <div class="section-title">👥 Divisão por Pessoa</div>
@@ -376,6 +420,18 @@ function mostrarEntrada() {
         <button class="btn-add" onclick="abrirModalPessoa()">+ Adicionar</button>
       </div>
       <div id="ger-pessoas"></div>
+    </div>
+    <div class="section">
+      <div class="section-title" style="margin-bottom:10px">🔒 Segurança</div>
+      <div style="background:white;border-radius:12px;padding:16px;border:1px solid #e2e8f0;box-shadow:0 1px 4px #0001">
+        <label class="mlabel">Senha atual</label>
+        <input class="minput" type="password" id="ger-senha-atual" placeholder="Deixe em branco se não tem senha"/>
+        <label class="mlabel">Nova senha</label>
+        <input class="minput" type="password" id="ger-senha-nova" placeholder="Nova senha (em branco = remover senha)"/>
+        <label class="mlabel">Confirmar nova senha</label>
+        <input class="minput" type="password" id="ger-senha-confirma" placeholder="Repita a nova senha"/>
+        <button onclick="alterarSenha()" style="width:100%;background:#0f3460;color:white;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">🔒 Salvar senha</button>
+      </div>
     </div>
   </div>
 
@@ -459,6 +515,9 @@ function mostrarCriar() {
   document.getElementById('modo-criar').style.display = 'block';
 }
 
+let casaIdPendente = null;
+window.setCasaIdPendente = (id) => { casaIdPendente = id; };
+
 async function entrarCasa() {
   const id = document.getElementById('input-casa-id').value.trim().toUpperCase();
   if (!id) return;
@@ -469,14 +528,50 @@ async function entrarCasa() {
     const ref = doc(db, 'casas', id, 'dados', 'principal');
     const snap = await getDoc(ref);
     if (snap.exists()) {
-      document.getElementById('entrada-overlay').style.display = 'none';
-      await window.iniciarCasa(id, true); // digita o código = salva no localStorage
-      initApp();
+      const dadosCasa = snap.data();
+      let parsed = {};
+      try { parsed = JSON.parse(dadosCasa.dados || '{}'); } catch {}
+      if (parsed.senha) {
+        // Casa tem senha — pede antes de entrar
+        casaIdPendente = id;
+        document.getElementById('modo-entrar').style.display = 'none';
+        document.getElementById('modo-senha').style.display = 'block';
+        document.getElementById('input-senha-acesso').value = '';
+        document.getElementById('senha-erro').style.display = 'none';
+      } else {
+        document.getElementById('entrada-overlay').style.display = 'none';
+        await window.iniciarCasa(id, true);
+        initApp();
+      }
     } else {
       document.getElementById('entrada-erro').style.display = 'block';
     }
   } catch(e) {
     document.getElementById('entrada-erro').style.display = 'block';
+  }
+}
+
+async function verificarSenha() {
+  const senha = document.getElementById('input-senha-acesso').value.trim();
+  if (!senha || !casaIdPendente) return;
+  try {
+    const { getFirestore, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js");
+    const db = getFirestore();
+    const ref = doc(db, 'casas', casaIdPendente, 'dados', 'principal');
+    const snap = await getDoc(ref);
+    const dadosCasa = snap.data();
+    let parsed = {};
+    try { parsed = JSON.parse(dadosCasa.dados || '{}'); } catch {}
+    if (parsed.senha === senha) {
+      document.getElementById('entrada-overlay').style.display = 'none';
+      await window.iniciarCasa(casaIdPendente, true);
+      casaIdPendente = null;
+      initApp();
+    } else {
+      document.getElementById('senha-erro').style.display = 'block';
+    }
+  } catch(e) {
+    document.getElementById('senha-erro').style.display = 'block';
   }
 }
 
@@ -489,12 +584,14 @@ function gerarId() {
 
 async function criarCasa() {
   const nome = document.getElementById('input-casa-nome').value.trim();
+  const senha = document.getElementById('input-casa-senha').value.trim();
   if (!nome) { showToast('⚠️ Informe o nome da casa'); return; }
   const id = gerarId();
   document.getElementById('entrada-overlay').style.display = 'none';
-  await window.iniciarCasa(id, true); // criou = salva no localStorage
+  await window.iniciarCasa(id, true);
   dados = JSON.parse(JSON.stringify(DEFAULTS));
   dados.nomeCasa = nome;
+  if (senha) dados.senha = senha;
   save();
   initApp();
   showToast('🏠 Casa "' + nome + '" criada! Código: ' + id);
@@ -547,9 +644,32 @@ function updateHeader() {
   const badge = MESES_NOMES[mesIdx].substring(0,3)+'/'+String(ano).substring(2);
   const diasSemana = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
   const hoje = new Date();
+  const nomeCasa = dados.nomeCasa || 'Contas de Casa';
+  document.getElementById('header-titulo').textContent = '🏠 ' + nomeCasa;
   document.getElementById('header-mes').textContent = diasSemana[hoje.getDay()] + ', ' + hoje.getDate() + ' de ' + MESES_NOMES[hoje.getMonth()] + ' de ' + hoje.getFullYear();
   document.getElementById('mes-badge').textContent = badge;
-  document.title = '🏠 ' + (dados.nomeCasa || 'Contas de Casa');
+  document.title = '🏠 ' + nomeCasa;
+}
+
+function compartilharLink() {
+  const link = window.location.href;
+  if (navigator.share) {
+    navigator.share({ title: '🏠 ' + (dados.nomeCasa || 'Contas de Casa'), text: 'Acesse o app de divisão de contas da nossa casa!', url: link });
+  } else {
+    navigator.clipboard.writeText(link).then(() => showToast('🔗 Link copiado!')).catch(() => { prompt('Copie o link:', link); });
+  }
+}
+
+function renderPendentes() {
+  const pendentes = dados.pessoas.filter(p => !p.pago);
+  const box = document.getElementById('pendentes-box');
+  const lista = document.getElementById('pendentes-lista');
+  if (pendentes.length === 0 || dados.mesFechado) {
+    box.style.display = 'none';
+  } else {
+    box.style.display = 'block';
+    lista.innerHTML = pendentes.map(p => `⏳ ${p.nome} — ${fmt(getValorPessoa(p.id))}`).join('<br>');
+  }
 }
 
 function getValorPessoa(pessoaId) {
@@ -608,6 +728,7 @@ function render() {
       </div>`;
     }).join('');
   }
+  renderPendentes();
 }
 
 function renderGer() {
@@ -768,6 +889,37 @@ function iniciarNovoMes() {
   dados.mesFechado = false;
   save(); render(); renderGer();
   showToast('🚀 Novo mês iniciado!');
+}
+
+function alterarSenha() {
+  const atual = document.getElementById('ger-senha-atual').value.trim();
+  const nova = document.getElementById('ger-senha-nova').value.trim();
+  const confirma = document.getElementById('ger-senha-confirma').value.trim();
+
+  // Verifica senha atual
+  const senhaAtual = dados.senha || '';
+  if (senhaAtual && atual !== senhaAtual) {
+    showToast('❌ Senha atual incorreta'); return;
+  }
+  if (!senhaAtual && atual) {
+    showToast('❌ Esta casa não tem senha ainda'); return;
+  }
+  // Verifica nova senha
+  if (nova && nova !== confirma) {
+    showToast('❌ As senhas não coincidem'); return;
+  }
+  if (nova) {
+    dados.senha = nova;
+    showToast('🔒 Senha definida com sucesso!');
+  } else {
+    delete dados.senha;
+    showToast('🔓 Senha removida!');
+  }
+  // Limpa campos
+  document.getElementById('ger-senha-atual').value = '';
+  document.getElementById('ger-senha-nova').value = '';
+  document.getElementById('ger-senha-confirma').value = '';
+  save();
 }
 
 function resetarTudo() {
