@@ -225,7 +225,8 @@ async function iniciarCasa(id, salvarLocal) {
 }
 
 window.saveToFirebase = async function(data) {
-  if (salvando || !docRef) return;
+  if (!docRef) { setTimeout(() => window.saveToFirebase(data), 500); return; }
+  if (salvando) return;
   try {
     salvando = true;
     ultimoSave = Date.now();
@@ -432,6 +433,13 @@ async function verificarSenhaLink(id) {
       <button onclick="compartilharLink()" style="width:100%;background:linear-gradient(90deg,#0f3460,#1e3a5f);color:white;border:2px solid #93c5fd;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:0">🔗 Compartilhar link desta casa</button>
     </div>
     <div class="section">
+      <div class="section-title" style="margin-bottom:10px">🏠 Nome da Casa</div>
+      <div style="background:white;border-radius:12px;padding:16px;border:1px solid #e2e8f0;box-shadow:0 1px 4px #0001;display:flex;gap:8px">
+        <input class="minput" type="text" id="ger-nome-casa" placeholder="Nome da sua casa" style="margin-bottom:0;flex:1"/>
+        <button onclick="salvarNomeCasa()" style="background:#f97316;color:white;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">💾 Salvar</button>
+      </div>
+    </div>
+    <div class="section">
       <div class="section-title" style="margin-bottom:10px">🔒 Segurança</div>
       <div style="background:white;border-radius:12px;padding:16px;border:1px solid #e2e8f0;box-shadow:0 1px 4px #0001">
         <label class="mlabel">Senha atual</label>
@@ -636,7 +644,14 @@ window.syncFromCloud = function(newDados) {
   render(); renderGer();
 };
 
-function save() { if (window.saveToFirebase) window.saveToFirebase(dados); }
+function save() {
+  if (window.saveToFirebase) {
+    window.saveToFirebase(dados);
+  } else {
+    // Firebase ainda não pronto — tenta de novo em 1 segundo
+    setTimeout(() => { if (window.saveToFirebase) window.saveToFirebase(dados); }, 1000);
+  }
+}
 function fmt(v) { return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function showToast(m) { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2400); }
 function abrirModal(id) { document.getElementById(id).classList.add('open'); }
@@ -752,6 +767,9 @@ function render() {
 }
 
 function renderGer() {
+  const inputNome = document.getElementById('ger-nome-casa');
+  if (inputNome) inputNome.value = dados.nomeCasa || '';
+
   const gc = document.getElementById('ger-contas');
   if (!dados.contas.length) { gc.innerHTML = '<div class="empty">Nenhuma conta cadastrada</div>'; }
   else {
@@ -909,6 +927,15 @@ function iniciarNovoMes() {
   dados.mesFechado = false;
   save(); render(); renderGer();
   showToast('🚀 Novo mês iniciado!');
+}
+
+function salvarNomeCasa() {
+  const nome = document.getElementById('ger-nome-casa').value.trim();
+  if (!nome) { showToast('⚠️ Informe o nome da casa'); return; }
+  dados.nomeCasa = nome;
+  save();
+  updateHeader();
+  showToast('✅ Nome da casa atualizado!');
 }
 
 function alterarSenha() {
