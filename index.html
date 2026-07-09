@@ -589,6 +589,12 @@ async function criarCasa() {
   const id = gerarId();
   document.getElementById('entrada-overlay').style.display = 'none';
   await window.iniciarCasa(id, true);
+  // Aguarda o Firebase estar pronto antes de salvar
+  await new Promise(resolve => {
+    if (window.fbReady) { resolve(); return; }
+    document.addEventListener('firebase-ready', resolve, { once: true });
+    setTimeout(resolve, 3000);
+  });
   dados = JSON.parse(JSON.stringify(DEFAULTS));
   dados.nomeCasa = nome;
   if (senha) dados.senha = senha;
