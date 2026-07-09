@@ -611,9 +611,13 @@ function load() {
 
 window.syncFromCloud = function(newDados) {
   if (!newDados) return;
+  // Preserva nomeCasa se o novo dado vier sem ele
+  if (!newDados.nomeCasa && dados.nomeCasa) newDados.nomeCasa = dados.nomeCasa;
   dados = newDados;
+  if (!dados.historico) dados.historico = [];
+  if (!dados.pessoas) dados.pessoas = [];
+  if (!dados.contas) dados.contas = [];
   render(); renderGer();
-  showToast('🔄 Sincronizado!');
 };
 
 function save() { if (window.saveToFirebase) window.saveToFirebase(dados); }
@@ -929,12 +933,22 @@ function resetarTudo() {
   showToast('✅ Histórico apagado!');
 }
 
-function initApp() { load(); updateHeader(); render(); }
+function initApp() {
+  load();
+  // Se Firebase ainda não carregou dados reais, mostra loading
+  if (!window.fbData || !window.fbData['dados']) {
+    document.getElementById('total-geral').textContent = '...';
+    document.getElementById('contas-lista').innerHTML = '<div class="empty">Carregando...</div>';
+    document.getElementById('pessoas-grid').innerHTML = '';
+  }
+  updateHeader();
+  render();
+}
 
 if (window.fbReady) { initApp(); }
 else {
   document.addEventListener('firebase-ready', initApp);
-  setTimeout(function() { if (!window.fbReady) { window.fbReady = true; initApp(); } }, 3000);
+  setTimeout(function() { if (!window.fbReady) { window.fbReady = true; initApp(); } }, 5000);
 }
 </script>
 </body>
