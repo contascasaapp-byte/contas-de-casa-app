@@ -865,6 +865,9 @@ function alterarSenha() {
   document.getElementById('ger-senha-nova').value='';
   document.getElementById('ger-senha-confirma').value='';
   save();
+  // Deslogar de todos os dispositivos — limpa localStorage e redireciona
+  localStorage.removeItem('contas_casa_id');
+  setTimeout(() => { window.location.href = window.location.pathname; }, 1500);
 }
 
 function fecharMes() {
