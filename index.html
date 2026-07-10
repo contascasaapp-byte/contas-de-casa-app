@@ -499,6 +499,7 @@ async function entrarCasa() {
         document.getElementById('input-senha-acesso').value = '';
         document.getElementById('senha-erro').style.display = 'none';
       } else {
+        localStorage.setItem('loginEm_' + id, Date.now().toString());
         document.getElementById('entrada-overlay').style.display = 'none';
         await window.iniciarCasa(id);
         initApp();
@@ -521,6 +522,7 @@ async function verificarSenha() {
     let parsed = {};
     try { parsed = JSON.parse(snap.data().dados || '{}'); } catch {}
     if (parsed.senha === senha) {
+      localStorage.setItem('loginEm_' + casaIdPendente, Date.now().toString());
       document.getElementById('entrada-overlay').style.display = 'none';
       await window.iniciarCasa(casaIdPendente);
       casaIdPendente = null;
@@ -580,6 +582,19 @@ function load() {
 
 window.syncFromCloud = function(nd) {
   if (!nd) return;
+  // Verifica se senha mudou após o login deste dispositivo
+  if (nd.senhaMudouEm && nd.senha) {
+    const casaId = localStorage.getItem('contas_casa_id');
+    const loginEm = parseInt(localStorage.getItem('loginEm_' + casaId) || '0');
+    if (nd.senhaMudouEm > loginEm && loginEm > 0) {
+      // Senha mudou depois que logou — desloga
+      localStorage.removeItem('contas_casa_id');
+      localStorage.removeItem('loginEm_' + casaId);
+      showToast('Senha alterada. Faça login novamente.');
+      setTimeout(() => { window.location.href = window.location.pathname; }, 2000);
+      return;
+    }
+  }
   dados = nd;
   if (!dados.historico) dados.historico = [];
   if (!dados.pessoas) dados.pessoas = [];
@@ -864,6 +879,7 @@ function alterarSenha() {
   if(nova&&nova!==confirma){showToast('As senhas não coincidem');return;}
   if(nova){dados.senha=nova;showToast('Senha definida!');}
   else{delete dados.senha;showToast('Senha removida!');}
+  dados.senhaMudouEm = Date.now();
   document.getElementById('ger-senha-atual').value='';
   document.getElementById('ger-senha-nova').value='';
   document.getElementById('ger-senha-confirma').value='';
