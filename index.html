@@ -224,51 +224,41 @@ async function iniciarCasa(id, salvarLocal) {
   });
 }
 
-let pendingSave = null;
-
 window.saveToFirebase = async function(data) {
-  // Guarda sempre o dado mais recente
-  pendingSave = JSON.parse(JSON.stringify(data));
-  
-  if (!docRef) { setTimeout(() => { if(pendingSave) window.saveToFirebase(pendingSave); }, 800); return; }
-  if (salvando) return; // vai pegar o pendingSave quando terminar
-
+  if (!docRef) {
+    setTimeout(() => window.saveToFirebase(data), 500);
+    return;
+  }
+  salvando = true;
+  ultimoSave = Date.now();
   try {
-    salvando = true;
-    ultimoSave = Date.now();
-    
-    // Mostrar indicador de salvando
-    const toast = document.getElementById('toast');
-    if (toast) { toast.textContent = '💾 Salvando...'; toast.classList.add('show'); }
-
-    const dataParaSalvar = pendingSave;
-    pendingSave = null;
-
+    const dataParaSalvar = JSON.parse(JSON.stringify(data));
     const fotosMap = {};
-    dataParaSalvar.pessoas = dataParaSalvar.pessoas.map(p => {
+    dataParaSalvar.pessoas = (dataParaSalvar.pessoas||[]).map(p => {
       if (p.foto) { fotosMap[p.id] = p.foto; delete p.foto; }
       return p;
     });
-    dataParaSalvar.historico = dataParaSalvar.historico.map(h => {
+    dataParaSalvar.historico = (dataParaSalvar.historico||[]).map(h => {
       h.pessoas = (h.pessoas||[]).map(p => { if(p.foto) delete p.foto; return p; });
       return h;
     });
     await setDoc(docRef, { dados: JSON.stringify(dataParaSalvar) }, { merge: true });
     if (Object.keys(fotosMap).length > 0) {
-      const fotosAtuais = window.fbFotos || {};
-      const novasFotos = {...fotosAtuais, ...fotosMap};
+      const novasFotos = {...(window.fbFotos||{}), ...fotosMap};
       await setDoc(fotosRef, { fotos: novasFotos }, { merge: true });
       window.fbFotos = novasFotos;
     }
-    // Confirmar salvo
-    if (toast) { toast.textContent = '✅ Salvo!'; setTimeout(() => toast.classList.remove('show'), 1500); }
-    
-    // Se teve novo save durante o processo, salva de novo
-    if (pendingSave) { window.saveToFirebase(pendingSave); }
+    // Feedback visual
+    const t = document.getElementById('toast');
+    if (t && !t.classList.contains('show')) {
+      t.textContent = '✅ Salvo!';
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 1500);
+    }
   } catch(e) {
-    console.log('Firebase save error:', e);
-    const toast = document.getElementById('toast');
-    if (toast) { toast.textContent = '❌ Erro ao salvar!'; setTimeout(() => toast.classList.remove('show'), 2000); }
+    console.error('Firebase save error:', e);
+    const t = document.getElementById('toast');
+    if (t) { t.textContent = '❌ Erro ao salvar!'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
   } finally {
     salvando = false;
   }
