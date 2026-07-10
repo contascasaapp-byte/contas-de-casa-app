@@ -688,7 +688,7 @@ async function entrarCasa() {
         document.getElementById('senha-erro').style.display = 'none';
       } else {
         document.getElementById('entrada-overlay').style.display = 'none';
-        await window.iniciarCasa(id, true);
+        await window.iniciarCasa(id);
         initApp();
       }
     } else {
@@ -930,8 +930,6 @@ function render() {
 }
 
 function renderGer() {
-  const inputNome = document.getElementById('ger-nome-casa');
-  if (inputNome) inputNome.value = dados.nomeCasa || '';
 
   const gc = document.getElementById('ger-contas');
   if (!dados.contas.length) { gc.innerHTML = '<div class="empty">Nenhuma conta cadastrada</div>'; }
@@ -1143,15 +1141,6 @@ function iniciarNovoMes() {
   dados.mesFechado = false;
   save(); render(); renderGer();
   showToast('🚀 Novo mês iniciado!');
-}
-
-function salvarNomeCasa() {
-  const nome = document.getElementById('ger-nome-casa').value.trim();
-  if (!nome) { showToast('⚠️ Informe o nome da casa'); return; }
-  dados.nomeCasa = nome;
-  save();
-  updateHeader();
-  showToast('✅ Nome da casa atualizado!');
 }
 
 function alterarSenha() {
