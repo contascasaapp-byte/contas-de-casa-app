@@ -205,7 +205,12 @@ if (casaIdUrl) {
     iniciarCasa(casaIdLocal);
   } else {
     window.fbReady = false;
-    document.addEventListener('DOMContentLoaded', () => mostrarEntrada());
+    // Mostra tela de entrada (DOMContentLoaded pode já ter passado)
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => mostrarEntrada());
+    } else {
+      mostrarEntrada();
+    }
   }
 }
 
