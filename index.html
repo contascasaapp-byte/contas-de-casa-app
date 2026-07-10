@@ -461,6 +461,14 @@ window.aplicarFotos = function() {
 
 <script>
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+async function hashSenha(senha) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(senha);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 const AV = ['av0','av1','av2','av3','av4','av5','av6','av7'];
 const DEFAULTS = { contas:[], pessoas:[], historico:[], nextId:1, mesFechado:false };
 
@@ -529,7 +537,13 @@ async function verificarSenha() {
     const snap = await getDoc(doc(db, 'casas', casaIdPendente, 'dados', 'principal'));
     let parsed = {};
     try { parsed = JSON.parse(snap.data().dados || '{}'); } catch {}
-    if (parsed.senha === senha) {
+    const senhaHash = await hashSenha(senha);
+    if (parsed.senha === senhaHash || parsed.senha === senha) {
+      // Atualiza para hash se ainda estava em texto puro
+      if (parsed.senha === senha) {
+        parsed.senha = senhaHash;
+        // Será atualizado no próximo save
+      }
       localStorage.setItem('loginEm_' + casaIdPendente, Date.now().toString());
       document.getElementById('entrada-overlay').style.display = 'none';
       await window.iniciarCasa(casaIdPendente);
@@ -558,7 +572,7 @@ async function criarCasa() {
   await window.iniciarCasa(id);
   dados = JSON.parse(JSON.stringify(DEFAULTS));
   dados.nomeCasa = nome;
-  if (senha) dados.senha = senha;
+  if (senha) dados.senha = await hashSenha(senha);
   save();
   document.getElementById('modo-criar').style.display = 'none';
   document.getElementById('modo-sucesso').style.display = 'block';
@@ -896,9 +910,10 @@ function alterarSenha() {
   const nova=document.getElementById('ger-senha-nova').value.trim();
   const confirma=document.getElementById('ger-senha-confirma').value.trim();
   const senhaAtual=dados.senha||'';
-  if(senhaAtual&&atual!==senhaAtual){showToast('Senha atual incorreta');return;}
+  const atualHash = atual ? await hashSenha(atual) : '';
+  if(senhaAtual&&atualHash!==senhaAtual&&atual!==senhaAtual){showToast('Senha atual incorreta');return;}
   if(nova&&nova!==confirma){showToast('As senhas não coincidem');return;}
-  if(nova){dados.senha=nova;showToast('Senha definida!');}
+  if(nova){dados.senha=await hashSenha(nova);showToast('Senha definida!');}
   else{delete dados.senha;showToast('Senha removida!');}
   dados.senhaMudouEm = Date.now();
   document.getElementById('ger-senha-atual').value='';
