@@ -670,6 +670,11 @@ async function entrarCasa() {
   const id = document.getElementById('input-casa-id').value.trim().toUpperCase();
   if (!id) return;
   document.getElementById('entrada-erro').style.display = 'none';
+  
+  // Mostra loading no botão
+  const btn = document.querySelector('#modo-entrar .entrada-btn');
+  if (btn) { btn.textContent = '⏳ Verificando...'; btn.disabled = true; }
+  
   try {
     const { getFirestore, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js");
     const db = getFirestore();
@@ -680,7 +685,6 @@ async function entrarCasa() {
       let parsed = {};
       try { parsed = JSON.parse(dadosCasa.dados || '{}'); } catch {}
       if (parsed.senha) {
-        // Casa tem senha — pede antes de entrar
         casaIdPendente = id;
         document.getElementById('modo-entrar').style.display = 'none';
         document.getElementById('modo-senha').style.display = 'block';
@@ -695,7 +699,11 @@ async function entrarCasa() {
       document.getElementById('entrada-erro').style.display = 'block';
     }
   } catch(e) {
+    console.error('Erro ao entrar:', e);
+    document.getElementById('entrada-erro').textContent = 'Erro de conexão. Verifique sua internet.';
     document.getElementById('entrada-erro').style.display = 'block';
+  } finally {
+    if (btn) { btn.textContent = '🚪 Entrar'; btn.disabled = false; }
   }
 }
 
