@@ -156,10 +156,18 @@ const urlParams = new URLSearchParams(window.location.search);
 const casaIdUrl = urlParams.get('casa');
 
 if (casaIdUrl) {
+  // Salva loginEm se ainda não tem
+  if (!localStorage.getItem('loginEm_' + casaIdUrl.toUpperCase())) {
+    localStorage.setItem('loginEm_' + casaIdUrl.toUpperCase(), Date.now().toString());
+  }
   iniciarCasa(casaIdUrl);
 } else {
   const casaIdLocal = localStorage.getItem('contas_casa_id');
   if (casaIdLocal) {
+    // Salva loginEm se ainda não tem
+    if (!localStorage.getItem('loginEm_' + casaIdLocal)) {
+      localStorage.setItem('loginEm_' + casaIdLocal, Date.now().toString());
+    }
     iniciarCasa(casaIdLocal);
   } else {
     window.fbReady = false;
