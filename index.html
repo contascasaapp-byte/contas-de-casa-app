@@ -547,6 +547,7 @@ async function criarCasa() {
   const id = gerarId();
   await window.iniciarCasa(id);
   dados = JSON.parse(JSON.stringify(DEFAULTS));
+  dados.nomeCasa = nome;
   if (senha) dados.senha = senha;
   save();
   document.getElementById('modo-criar').style.display = 'none';
@@ -617,7 +618,9 @@ function updateHeader() {
   const hoje = new Date();
   document.getElementById('header-mes').textContent = dias[hoje.getDay()]+', '+hoje.getDate()+' de '+MESES[hoje.getMonth()]+' de '+hoje.getFullYear();
   document.getElementById('mes-badge').textContent = badge;
-  document.title = '🏠 Contas de Casa';
+  const nomeCasa = (dados && dados.nomeCasa) ? dados.nomeCasa : 'Contas de Casa';
+  document.querySelector('.header h1').textContent = '🏠 ' + nomeCasa;
+  document.title = '🏠 ' + nomeCasa;
 }
 
 function getValorPessoa(pid) {
