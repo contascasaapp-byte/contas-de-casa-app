@@ -47,7 +47,7 @@
   .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
   .section-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
   .btn-add { background: #f97316; color: white; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
-  .btn-novo-mes { width: 100%; background: linear-gradient(90deg,#0f3460,#1e3a5f); color: white; border: none; border-radius: 12px; padding: 14px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 18px; border: 2px solid #f97316; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-novo-mes { width: 100%; color: white; border: none; border-radius: 12px; padding: 14px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 
   .conta-card { background: white; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 4px #0001; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; gap: 8px; transition: all 0.2s; }
   .conta-card.pago { background: #f0fdf4; border-color: #bbf7d0; }
@@ -62,10 +62,6 @@
   .conta-card.pago .conta-valor { color: #22c55e; }
   .btn-check { background: none; border: 2px solid #e2e8f0; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.2s; }
   .conta-card.pago .btn-check { background: #22c55e; border-color: #22c55e; color: white; }
-  .btn-del { background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 14px; }
-  .btn-del:hover { color: #ef4444; }
-  .btn-edit { background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 14px; }
-  .btn-edit:hover { color: #f97316; }
 
   .pessoas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .pessoa-card { background: white; border-radius: 12px; padding: 14px; box-shadow: 0 1px 4px #0001; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s; }
@@ -129,7 +125,7 @@
   .entrada-input { width: 100%; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; font-size: 16px; color: #1e293b; outline: none; margin-bottom: 12px; font-family: 'Inter', sans-serif; text-align: center; letter-spacing: 2px; }
   .entrada-input:focus { border-color: #0f3460; }
   .entrada-btn { width: 100%; background: #f97316; color: white; border: none; border-radius: 10px; padding: 13px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 12px; }
-  .entrada-btn-criar { width: 100%; background: transparent; color: #0f3460; border: 2px solid #0f3460; border-radius: 10px; padding: 11px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .entrada-btn-sec { width: 100%; background: transparent; color: #0f3460; border: 2px solid #0f3460; border-radius: 10px; padding: 11px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
   .entrada-erro { font-size: 12px; color: #ef4444; margin-bottom: 8px; display: none; }
 </style>
 
@@ -153,189 +149,95 @@ enableNetwork(db);
 let casaId = null;
 let docRef = null;
 let fotosRef = null;
-let authRef = null;
+let salvando = false;
 let ultimoSave = 0;
 
-// ====== TOKEN DE AUTH ======
-function getDeviceToken() {
-  let t = localStorage.getItem('device_token');
-  if (!t) { t = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('device_token', t); }
-  return t;
-}
-
-window.salvarTokenAuth = async function(id) {
-  if (!authRef) return;
-  const t = getDeviceToken();
-  localStorage.setItem('auth_' + id, t);
-  setDoc(authRef, { [t]: true }, { merge: true }).catch(() => {});
-};
-
-window.verificarTokenAuth = async function(id) {
-  const t = localStorage.getItem('auth_' + id);
-  if (!t) return false;
-  try {
-    const snap = await getDoc(doc(db, 'casas', id, 'auth', 'tokens'));
-    return snap.exists() && snap.data()[t] === true;
-  } catch(e) { return false; }
-};
-
-window.invalidarTokensAuth = async function() {
-  if (!authRef) return;
-  setDoc(authRef, {}, { merge: false }).catch(() => {});
-  if (casaId) localStorage.removeItem('auth_' + casaId);
-};
-
-// ====== INICIALIZAÇÃO ======
 const urlParams = new URLSearchParams(window.location.search);
 const casaIdUrl = urlParams.get('casa');
 
 if (casaIdUrl) {
-  // Acesso por link — verifica senha
-  verificarSenhaLink(casaIdUrl);
+  iniciarCasa(casaIdUrl);
 } else {
   const casaIdLocal = localStorage.getItem('contas_casa_id');
   if (casaIdLocal) {
     iniciarCasa(casaIdLocal);
   } else {
-    // Sem casa — mostra tela de entrada
     window.fbReady = false;
-    function tryMostrar() {
-      if (typeof window.mostrarEntrada === 'function') {
-        window.mostrarEntrada();
-      } else {
-        setTimeout(tryMostrar, 100);
-      }
-    }
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', tryMostrar);
-    } else {
-      tryMostrar();
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const el = document.getElementById('entrada-overlay');
+      if (el) el.style.display = 'flex';
+    });
   }
 }
 
-// ====== INICIAR CASA ======
 async function iniciarCasa(id) {
   casaId = id.toUpperCase();
   localStorage.setItem('contas_casa_id', casaId);
   docRef = doc(db, 'casas', casaId, 'dados', 'principal');
   fotosRef = doc(db, 'casas', casaId, 'dados', 'fotos');
-  authRef = doc(db, 'casas', casaId, 'auth', 'tokens');
 
   const url = new URL(window.location);
   url.searchParams.set('casa', casaId);
   window.history.replaceState({}, '', url);
 
-  // Carrega localStorage imediatamente
-  const localKey = 'casa_dados_' + casaId;
-  const localFotosKey = 'casa_fotos_' + casaId;
-  const localDados = localStorage.getItem(localKey);
-  if (localDados) {
-    window.fbData = { dados: localDados };
-    try { window.fbFotos = JSON.parse(localStorage.getItem(localFotosKey) || '{}'); } catch { window.fbFotos = {}; }
-  }
-
-  // Dispara app com dados locais
-  window.fbReady = true;
-  function dispararReady() { document.dispatchEvent(new Event('firebase-ready')); }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', dispararReady);
-  } else {
-    dispararReady();
-  }
-
-  // Sincroniza Firebase em background
-  try {
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      const fbDados = snap.data();
-      const localTs = localDados ? (JSON.parse(localDados).ultimoSave || 0) : 0;
-      const fbTs = fbDados.ultimoSave || 0;
-      if (!localDados || fbTs > localTs) {
-        window.fbData = fbDados;
-        localStorage.setItem(localKey, fbDados.dados || '{}');
-        try {
-          const nd = JSON.parse(fbDados.dados || '{}');
-          if (typeof window.syncFromCloud === 'function') window.syncFromCloud(nd);
-        } catch(e) {}
-      }
+  let primeiraVez = true;
+  onSnapshot(docRef, (snap) => {
+    window.fbData = snap.exists() ? snap.data() : {};
+    if (primeiraVez) {
+      primeiraVez = false;
+      window.fbReady = true;
+      document.dispatchEvent(new Event('firebase-ready'));
+      return;
     }
-    const snapFotos = await getDoc(fotosRef);
-    if (snapFotos.exists()) {
-      window.fbFotos = snapFotos.data().fotos || {};
-      localStorage.setItem(localFotosKey, JSON.stringify(window.fbFotos));
-      if (typeof window.aplicarFotos === 'function') window.aplicarFotos();
+    if (Date.now() - ultimoSave > 3000 && window.fbData['dados']) {
+      try {
+        const nd = JSON.parse(window.fbData['dados']);
+        if (typeof window.syncFromCloud === 'function') window.syncFromCloud(nd);
+      } catch(e) {}
     }
-  } catch(e) { console.log('Firebase sync:', e); }
-
-  // Listener tempo real
-  onSnapshot(docRef, snap => {
-    if (!snap.exists() || Date.now() - ultimoSave < 3000) return;
-    window.fbData = snap.data();
-    localStorage.setItem(localKey, snap.data().dados || '{}');
-    try {
-      const nd = JSON.parse(snap.data().dados || '{}');
-      if (typeof window.syncFromCloud === 'function') window.syncFromCloud(nd);
-    } catch(e) {}
+  }, () => {
+    window.fbData = {};
+    window.fbReady = true;
+    document.dispatchEvent(new Event('firebase-ready'));
   });
 
-  onSnapshot(fotosRef, snap => {
-    if (!snap.exists()) return;
-    window.fbFotos = snap.data().fotos || {};
-    localStorage.setItem(localFotosKey, JSON.stringify(window.fbFotos));
-    if (typeof window.aplicarFotos === 'function') window.aplicarFotos();
+  onSnapshot(fotosRef, (snap) => {
+    if (snap.exists()) {
+      window.fbFotos = snap.data().fotos || {};
+      if (typeof window.aplicarFotos === 'function') window.aplicarFotos();
+    }
   });
 }
 
-// ====== SAVE ======
-window.saveToFirebase = function(data) {
-  if (!casaId) return;
-  const localKey = 'casa_dados_' + casaId;
-  const d = JSON.parse(JSON.stringify(data));
-  d.ultimoSave = Date.now();
+window.iniciarCasa = iniciarCasa;
 
-  const fotosMap = {};
-  d.pessoas = (d.pessoas||[]).map(p => { if (p.foto) { fotosMap[p.id] = p.foto; delete p.foto; } return p; });
-  d.historico = (d.historico||[]).map(h => { h.pessoas = (h.pessoas||[]).map(p => { if(p.foto) delete p.foto; return p; }); return h; });
-
-  const json = JSON.stringify(d);
-  localStorage.setItem(localKey, json);
-  window.fbData = { dados: json };
-
-  if (Object.keys(fotosMap).length > 0) {
-    const nf = {...(window.fbFotos||{}), ...fotosMap};
-    window.fbFotos = nf;
-    localStorage.setItem('casa_fotos_' + casaId, JSON.stringify(nf));
-  }
-
-  const t = document.getElementById('toast');
-  if (t && !t.classList.contains('show')) {
-    t.textContent = '✅ Salvo!'; t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 1500);
-  }
-
-  if (docRef) {
+window.saveToFirebase = async function(data) {
+  if (salvando || !docRef) return;
+  try {
+    salvando = true;
     ultimoSave = Date.now();
-    setDoc(docRef, { dados: json, ultimoSave: ultimoSave }, { merge: true }).catch(e => console.log(e));
+    const d = JSON.parse(JSON.stringify(data));
+    const fotosMap = {};
+    d.pessoas = (d.pessoas||[]).map(p => { if (p.foto) { fotosMap[p.id] = p.foto; delete p.foto; } return p; });
+    d.historico = (d.historico||[]).map(h => { h.pessoas = (h.pessoas||[]).map(p => { if(p.foto) delete p.foto; return p; }); return h; });
+    await setDoc(docRef, { dados: JSON.stringify(d) }, { merge: true });
     if (Object.keys(fotosMap).length > 0) {
-      setDoc(fotosRef, { fotos: window.fbFotos }, { merge: true }).catch(e => console.log(e));
+      const nf = {...(window.fbFotos||{}), ...fotosMap};
+      await setDoc(fotosRef, { fotos: nf }, { merge: true });
+      window.fbFotos = nf;
     }
-  }
+  } catch(e) { console.log('Save error:', e); }
+  finally { salvando = false; }
 };
 
 window.loadFromFirebase = function() {
-  if (!casaId) return null;
-  const localDados = localStorage.getItem('casa_dados_' + casaId);
-  if (localDados) {
+  if (window.fbData && window.fbData['dados']) {
     try {
-      const d = JSON.parse(localDados);
+      const d = JSON.parse(window.fbData['dados']);
       const fotos = window.fbFotos || {};
       d.pessoas = (d.pessoas||[]).map(p => { if (fotos[p.id]) p.foto = fotos[p.id]; return p; });
       return d;
     } catch {}
-  }
-  if (window.fbData && window.fbData.dados) {
-    try { return JSON.parse(window.fbData.dados); } catch {}
   }
   return null;
 };
@@ -350,64 +252,6 @@ window.aplicarFotos = function() {
   });
   if (alterou && typeof render === 'function') render();
 };
-
-window.mostrarEntrada = function() {
-  const el = document.getElementById('entrada-overlay');
-  if (el) el.style.display = 'flex';
-};
-
-window.iniciarCasa = iniciarCasa;
-
-// ====== VERIFICAR SENHA (acesso por link) ======
-async function verificarSenhaLink(id) {
-  const idUpper = id.toUpperCase();
-
-  // Token válido no Firebase? Entra direto
-  try {
-    const tokenValido = await window.verificarTokenAuth(idUpper);
-    if (tokenValido) { iniciarCasa(id); return; }
-  } catch(e) {}
-
-  // Verifica se tem senha (localStorage primeiro, depois Firebase)
-  let temSenha = false;
-  const localDados = localStorage.getItem('casa_dados_' + idUpper);
-  if (localDados) {
-    try { temSenha = !!JSON.parse(localDados).senha; } catch {}
-  }
-  if (!temSenha) {
-    try {
-      const snap = await getDoc(doc(db, 'casas', idUpper, 'dados', 'principal'));
-      if (snap.exists()) {
-        try { temSenha = !!JSON.parse(snap.data().dados || '{}').senha; } catch {}
-      }
-    } catch(e) {}
-  }
-
-  if (temSenha) {
-    // Mostra tela de senha
-    window.setCasaIdPendente(idUpper);
-    window.fbReady = false;
-    function mostrarTelaSenha() {
-      if (typeof window.mostrarEntrada === 'function') {
-        window.mostrarEntrada();
-        document.getElementById('modo-entrar').style.display = 'none';
-        document.getElementById('modo-criar').style.display = 'none';
-        document.getElementById('modo-senha').style.display = 'block';
-      } else {
-        setTimeout(mostrarTelaSenha, 100);
-      }
-    }
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', mostrarTelaSenha);
-    } else {
-      mostrarTelaSenha();
-    }
-    window.fbData = {}; window.fbReady = true;
-    document.dispatchEvent(new Event('firebase-ready'));
-  } else {
-    iniciarCasa(id);
-  }
-}
 </script>
 </head>
 <body>
@@ -421,33 +265,33 @@ async function verificarSenhaLink(id) {
     <div id="modo-entrar">
       <input class="entrada-input" type="text" id="input-casa-id" placeholder="Código da sua casa" maxlength="10" oninput="this.value=this.value.toUpperCase()"/>
       <div class="entrada-erro" id="entrada-erro">Código não encontrado. Verifique e tente novamente.</div>
-      <button class="entrada-btn" onclick="entrarCasa()">🚪 Entrar</button>
-      <button class="entrada-btn-criar" id="btn-criar-casa" onclick="mostrarCriar()" style="display:none">✨ Criar nova casa</button>
+      <button class="entrada-btn" onclick="entrarCasa()">Entrar</button>
+      <button class="entrada-btn-sec" id="btn-criar-casa" onclick="mostrarCriar()" style="display:none">Criar nova casa</button>
     </div>
 
     <div id="modo-criar" style="display:none">
       <input class="entrada-input" type="text" id="input-casa-nome" placeholder="Nome da sua casa" style="letter-spacing:0;text-align:left"/>
-      <input class="entrada-input" type="password" id="input-casa-senha" placeholder="Senha (opcional)" style="letter-spacing:0;text-align:left"/>
-      <div style="font-size:11px;color:#94a3b8;margin-bottom:12px;margin-top:-8px">Deixe em branco para acesso livre</div>
-      <button class="entrada-btn" onclick="criarCasa()">🏠 Criar casa</button>
-      <button class="entrada-btn-criar" onclick="mostrarEntrar()">← Voltar</button>
+      <input class="entrada-input" type="password" id="input-casa-senha" placeholder="Senha (opcional)" style="letter-spacing:0;text-align:left;margin-top:-4px"/>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:12px;margin-top:-8px;text-align:left">Senha protege o acesso. Deixe em branco para acesso livre.</div>
+      <button class="entrada-btn" onclick="criarCasa()">Criar casa</button>
+      <button class="entrada-btn-sec" onclick="mostrarEntrar()">Voltar</button>
     </div>
 
     <div id="modo-sucesso" style="display:none;text-align:center">
       <div style="font-size:48px;margin-bottom:12px">🎉</div>
-      <div style="font-size:16px;font-weight:800;color:#0f3460;margin-bottom:6px">Casa criada com sucesso!</div>
-      <div style="font-size:13px;color:#64748b;margin-bottom:16px">Guarde o código abaixo — é ele que dá acesso à sua casa!</div>
+      <div style="font-size:16px;font-weight:800;color:#0f3460;margin-bottom:6px">Casa criada!</div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:16px">Guarde este código — é o acesso da sua casa</div>
       <div id="sucesso-codigo" style="background:#f1f5f9;border:2px dashed #0f3460;border-radius:12px;padding:16px;font-size:28px;font-weight:800;color:#0f3460;letter-spacing:6px;margin-bottom:12px"></div>
-      <button onclick="copiarCodigo()" style="width:100%;background:#f97316;color:white;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px">📋 Copiar código</button>
-      <button onclick="entrarComCodigo()" style="width:100%;background:#0f3460;color:white;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer">🏠 Entrar na casa</button>
+      <button class="entrada-btn" onclick="copiarCodigo()">Copiar código</button>
+      <button class="entrada-btn-sec" onclick="entrarComSucesso()">Entrar na casa</button>
     </div>
 
     <div id="modo-senha" style="display:none">
       <div style="font-size:13px;color:#64748b;margin-bottom:16px">🔒 Esta casa é protegida por senha</div>
       <input class="entrada-input" type="password" id="input-senha-acesso" placeholder="Digite a senha"/>
       <div class="entrada-erro" id="senha-erro">Senha incorreta. Tente novamente.</div>
-      <button class="entrada-btn" onclick="verificarSenha()">🔓 Entrar</button>
-      <button class="entrada-btn-criar" onclick="mostrarEntrar()">← Voltar</button>
+      <button class="entrada-btn" onclick="verificarSenha()">Entrar</button>
+      <button class="entrada-btn-sec" onclick="mostrarEntrar()">Voltar</button>
     </div>
   </div>
 </div>
@@ -480,7 +324,7 @@ async function verificarSenhaLink(id) {
       </div>
       <div class="total-cada">
         <div class="label">Cada um paga</div>
-        <div class="value" id="total-cada">R$ 0,00</div>
+        <div class="value" id="total-cada">—</div>
       </div>
     </div>
 
@@ -494,9 +338,7 @@ async function verificarSenhaLink(id) {
     </div>
 
     <div class="section">
-      <div class="section-header">
-        <div class="section-title">💡 Contas do Mês</div>
-      </div>
+      <div class="section-header"><div class="section-title">💡 Contas do Mês</div></div>
       <div id="contas-lista"></div>
     </div>
 
@@ -506,9 +348,7 @@ async function verificarSenhaLink(id) {
     </div>
 
     <div class="section">
-      <div class="section-header">
-        <div class="section-title">👥 Divisão por Pessoa</div>
-      </div>
+      <div class="section-header"><div class="section-title">👥 Divisão por Pessoa</div></div>
       <div class="pessoas-grid" id="pessoas-grid"></div>
     </div>
 
@@ -534,18 +374,18 @@ async function verificarSenhaLink(id) {
       <div id="ger-pessoas"></div>
     </div>
     <div class="section">
-      <button onclick="compartilharLink()" style="width:100%;background:linear-gradient(90deg,#0f3460,#1e3a5f);color:white;border:2px solid #93c5fd;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:0">🔗 Compartilhar link desta casa</button>
+      <button onclick="compartilharLink()" style="width:100%;background:linear-gradient(90deg,#0f3460,#1e3a5f);color:white;border:2px solid #93c5fd;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">🔗 Compartilhar link desta casa</button>
     </div>
     <div class="section">
       <div class="section-title" style="margin-bottom:10px">🔒 Segurança</div>
       <div style="background:white;border-radius:12px;padding:16px;border:1px solid #e2e8f0;box-shadow:0 1px 4px #0001">
-        <label class="mlabel">Senha atual</label>
-        <input class="minput" type="password" id="ger-senha-atual" placeholder="Deixe em branco se não tem senha"/>
-        <label class="mlabel">Nova senha</label>
-        <input class="minput" type="password" id="ger-senha-nova" placeholder="Nova senha (em branco = remover senha)"/>
+        <label class="mlabel">Senha atual (deixe vazio se não tem senha)</label>
+        <input class="minput" type="password" id="ger-senha-atual" placeholder="Senha atual"/>
+        <label class="mlabel">Nova senha (vazio = remover senha)</label>
+        <input class="minput" type="password" id="ger-senha-nova" placeholder="Nova senha"/>
         <label class="mlabel">Confirmar nova senha</label>
         <input class="minput" type="password" id="ger-senha-confirma" placeholder="Repita a nova senha"/>
-        <button onclick="alterarSenha()" style="width:100%;background:#0f3460;color:white;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">🔒 Salvar senha</button>
+        <button onclick="alterarSenha()" style="width:100%;background:#0f3460;color:white;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">Salvar senha</button>
       </div>
     </div>
   </div>
@@ -562,7 +402,7 @@ async function verificarSenhaLink(id) {
 <div class="modal-overlay" id="modal-conta">
   <div class="modal">
     <div class="modal-hdr">
-      <h3 id="modal-conta-titulo">➕ Nova Conta</h3>
+      <h3 id="modal-conta-titulo">Nova Conta</h3>
       <button class="modal-x" onclick="fecharModal('modal-conta')">✕</button>
     </div>
     <div class="modal-body">
@@ -582,7 +422,7 @@ async function verificarSenhaLink(id) {
         <option value="🛒">🛒 Mercado</option>
         <option value="💡">💡 Outro</option>
       </select>
-      <label class="mlabel">Quem paga? (deixe em branco = todos dividem)</label>
+      <label class="mlabel">Quem paga? (vazio = todos dividem)</label>
       <div id="input-responsaveis" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
     </div>
     <div class="modal-ftr">
@@ -595,7 +435,7 @@ async function verificarSenhaLink(id) {
 <div class="modal-overlay" id="modal-pessoa">
   <div class="modal">
     <div class="modal-hdr">
-      <h3>➕ Novo Morador</h3>
+      <h3>Novo Morador</h3>
       <button class="modal-x" onclick="fecharModal('modal-pessoa')">✕</button>
     </div>
     <div class="modal-body">
@@ -612,54 +452,46 @@ async function verificarSenhaLink(id) {
 <div class="toast" id="toast"></div>
 
 <script>
-const MESES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const AV_COLORS = ['av0','av1','av2','av3','av4','av5','av6','av7'];
-const DEFAULTS = { contas:[], pessoas:[], historico:[], nextId:1, mesFechado:false, nomeCasa:'Minha Casa' };
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const AV = ['av0','av1','av2','av3','av4','av5','av6','av7'];
+const DEFAULTS = { contas:[], pessoas:[], historico:[], nextId:1, mesFechado:false };
 
 let dados = {};
 let editContaId = null;
+let casaIdPendente = null;
 
-// Mostra botão criar só se ?admin=true na URL
+// === ADMIN ===
 document.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('admin') === 'true') {
+  if (new URLSearchParams(window.location.search).get('admin') === 'true') {
     const btn = document.getElementById('btn-criar-casa');
     if (btn) btn.style.display = 'block';
   }
 });
 
+// === ENTRADA ===
 function mostrarEntrar() {
   document.getElementById('modo-entrar').style.display = 'block';
   document.getElementById('modo-criar').style.display = 'none';
+  document.getElementById('modo-sucesso').style.display = 'none';
+  document.getElementById('modo-senha').style.display = 'none';
   document.getElementById('entrada-erro').style.display = 'none';
 }
-
 function mostrarCriar() {
   document.getElementById('modo-entrar').style.display = 'none';
   document.getElementById('modo-criar').style.display = 'block';
 }
 
-let casaIdPendente = null;
-window.setCasaIdPendente = (id) => { casaIdPendente = id; };
-
 async function entrarCasa() {
   const id = document.getElementById('input-casa-id').value.trim().toUpperCase();
   if (!id) return;
   document.getElementById('entrada-erro').style.display = 'none';
-  
-  // Mostra loading no botão
-  const btn = document.querySelector('#modo-entrar .entrada-btn');
-  if (btn) { btn.textContent = '⏳ Verificando...'; btn.disabled = true; }
-  
   try {
     const { getFirestore, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js");
     const db = getFirestore();
-    const ref = doc(db, 'casas', id, 'dados', 'principal');
-    const snap = await getDoc(ref);
+    const snap = await getDoc(doc(db, 'casas', id, 'dados', 'principal'));
     if (snap.exists()) {
-      const dadosCasa = snap.data();
       let parsed = {};
-      try { parsed = JSON.parse(dadosCasa.dados || '{}'); } catch {}
+      try { parsed = JSON.parse(snap.data().dados || '{}'); } catch {}
       if (parsed.senha) {
         casaIdPendente = id;
         document.getElementById('modo-entrar').style.display = 'none';
@@ -675,11 +507,7 @@ async function entrarCasa() {
       document.getElementById('entrada-erro').style.display = 'block';
     }
   } catch(e) {
-    console.error('Erro ao entrar:', e);
-    document.getElementById('entrada-erro').textContent = 'Erro de conexão. Verifique sua internet.';
     document.getElementById('entrada-erro').style.display = 'block';
-  } finally {
-    if (btn) { btn.textContent = '🚪 Entrar'; btn.disabled = false; }
   }
 }
 
@@ -689,15 +517,12 @@ async function verificarSenha() {
   try {
     const { getFirestore, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js");
     const db = getFirestore();
-    const ref = doc(db, 'casas', casaIdPendente, 'dados', 'principal');
-    const snap = await getDoc(ref);
-    const dadosCasa = snap.data();
+    const snap = await getDoc(doc(db, 'casas', casaIdPendente, 'dados', 'principal'));
     let parsed = {};
-    try { parsed = JSON.parse(dadosCasa.dados || '{}'); } catch {}
+    try { parsed = JSON.parse(snap.data().dados || '{}'); } catch {}
     if (parsed.senha === senha) {
       document.getElementById('entrada-overlay').style.display = 'none';
       await window.iniciarCasa(casaIdPendente);
-      if (window.salvarTokenAuth) await window.salvarTokenAuth(casaIdPendente);
       casaIdPendente = null;
       initApp();
     } else {
@@ -715,25 +540,15 @@ function gerarId() {
   return id;
 }
 
-let casaCriadaId = null;
-
 async function criarCasa() {
   const nome = document.getElementById('input-casa-nome').value.trim();
   const senha = document.getElementById('input-casa-senha').value.trim();
-  if (!nome) { showToast('⚠️ Informe o nome da casa'); return; }
+  if (!nome) { showToast('Informe o nome da casa'); return; }
   const id = gerarId();
-  casaCriadaId = id;
   await window.iniciarCasa(id);
-  await new Promise(resolve => {
-    if (window.fbReady) { resolve(); return; }
-    document.addEventListener('firebase-ready', resolve, { once: true });
-    setTimeout(resolve, 3000);
-  });
   dados = JSON.parse(JSON.stringify(DEFAULTS));
-  dados.nomeCasa = nome;
   if (senha) dados.senha = senha;
   save();
-  // Mostrar tela de sucesso com o código
   document.getElementById('modo-criar').style.display = 'none';
   document.getElementById('modo-sucesso').style.display = 'block';
   document.getElementById('sucesso-codigo').textContent = id;
@@ -741,66 +556,39 @@ async function criarCasa() {
 
 function copiarCodigo() {
   const codigo = document.getElementById('sucesso-codigo').textContent;
-  navigator.clipboard.writeText(codigo).then(() => {
-    showToast('📋 Código copiado!');
-  }).catch(() => {
-    prompt('Copie o código:', codigo);
-  });
+  navigator.clipboard.writeText(codigo).then(() => showToast('Código copiado!')).catch(() => prompt('Copie:', codigo));
 }
 
-function entrarComCodigo() {
+function entrarComSucesso() {
   document.getElementById('entrada-overlay').style.display = 'none';
   initApp();
 }
 
+// === APP ===
 function load() {
   try {
-    const fbDados = window.loadFromFirebase ? window.loadFromFirebase() : null;
-    if (fbDados && fbDados.pessoas !== undefined) { dados = fbDados; }
+    const d = window.loadFromFirebase ? window.loadFromFirebase() : null;
+    if (d && d.pessoas !== undefined) { dados = d; }
     else { dados = JSON.parse(JSON.stringify(DEFAULTS)); }
   } catch { dados = JSON.parse(JSON.stringify(DEFAULTS)); }
   if (!dados.historico) dados.historico = [];
   if (dados.mesFechado === undefined) dados.mesFechado = false;
   if (!dados.pessoas) dados.pessoas = [];
   if (!dados.contas) dados.contas = [];
-  // Se fotos ainda não carregaram, tenta de novo em 2 segundos
-  if (!window.fbFotos) {
-    setTimeout(() => {
-      const fotos = window.fbFotos || {};
-      let alterou = false;
-      dados.pessoas = dados.pessoas.map(p => {
-        if (fotos[p.id] && !p.foto) { p.foto = fotos[p.id]; alterou = true; }
-        return p;
-      });
-      if (alterou) { render(); renderGer(); }
-    }, 2000);
-  }
 }
 
-window.syncFromCloud = function(newDados) {
-  if (!newDados) return;
-  if (!newDados.nomeCasa && dados.nomeCasa) newDados.nomeCasa = dados.nomeCasa;
-  dados = newDados;
+window.syncFromCloud = function(nd) {
+  if (!nd) return;
+  dados = nd;
   if (!dados.historico) dados.historico = [];
   if (!dados.pessoas) dados.pessoas = [];
   if (!dados.contas) dados.contas = [];
-  // Reaplicar fotos do Firebase
   const fotos = window.fbFotos || {};
-  dados.pessoas = dados.pessoas.map(p => {
-    if (fotos[p.id]) p.foto = fotos[p.id];
-    return p;
-  });
+  dados.pessoas = dados.pessoas.map(p => { if (fotos[p.id]) p.foto = fotos[p.id]; return p; });
   render(); renderGer();
 };
 
-function save() {
-  if (window.saveToFirebase) {
-    window.saveToFirebase(dados);
-  } else {
-    // Firebase ainda não pronto — tenta de novo em 1 segundo
-    setTimeout(() => { if (window.saveToFirebase) window.saveToFirebase(dados); }, 1000);
-  }
-}
+function save() { if (window.saveToFirebase) window.saveToFirebase(dados); }
 function fmt(v) { return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function showToast(m) { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2400); }
 function abrirModal(id) { document.getElementById(id).classList.add('open'); }
@@ -821,87 +609,69 @@ function showTab(name, btn) {
 
 function updateHeader() {
   const now = new Date();
-  let mesIdx = now.getMonth(); let ano = now.getFullYear();
-  const mesAtualNome = MESES_NOMES[mesIdx]+'/'+ano;
-  const mesJaFechado = dados && (dados.mesFechado || (dados.historico && dados.historico.some(h => h.mes === mesAtualNome)));
-  if (mesJaFechado) { mesIdx += 1; if (mesIdx > 11) { mesIdx = 0; ano += 1; } }
-  const badge = MESES_NOMES[mesIdx].substring(0,3)+'/'+String(ano).substring(2);
-  const diasSemana = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  let mi = now.getMonth(), ano = now.getFullYear();
+  const mesAtual = MESES[mi]+'/'+ano;
+  if (dados && (dados.mesFechado || (dados.historico||[]).some(h=>h.mes===mesAtual))) { mi++; if(mi>11){mi=0;ano++;} }
+  const badge = MESES[mi].substring(0,3)+'/'+String(ano).substring(2);
+  const dias = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
   const hoje = new Date();
-  document.getElementById('header-mes').textContent = diasSemana[hoje.getDay()] + ', ' + hoje.getDate() + ' de ' + MESES_NOMES[hoje.getMonth()] + ' de ' + hoje.getFullYear();
+  document.getElementById('header-mes').textContent = dias[hoje.getDay()]+', '+hoje.getDate()+' de '+MESES[hoje.getMonth()]+' de '+hoje.getFullYear();
   document.getElementById('mes-badge').textContent = badge;
   document.title = '🏠 Contas de Casa';
 }
 
-function compartilharLink() {
-  const link = window.location.href;
-  if (navigator.share) {
-    navigator.share({ title: '🏠 ' + (dados.nomeCasa || 'Contas de Casa'), text: 'Acesse o app de divisão de contas da nossa casa!', url: link });
-  } else {
-    navigator.clipboard.writeText(link).then(() => showToast('🔗 Link copiado!')).catch(() => { prompt('Copie o link:', link); });
-  }
+function getValorPessoa(pid) {
+  return dados.contas.reduce((s,c) => {
+    const resp = c.responsaveis&&c.responsaveis.length>0 ? c.responsaveis : dados.pessoas.map(p=>p.id);
+    return resp.includes(pid) ? s+c.valor/resp.length : s;
+  }, 0);
 }
 
 function renderPendentes() {
-  const pendentes = dados.pessoas.filter(p => !p.pago);
+  const pendentes = dados.pessoas.filter(p=>!p.pago);
   const box = document.getElementById('pendentes-box');
-  const lista = document.getElementById('pendentes-lista');
-  if (pendentes.length === 0 || dados.mesFechado) {
-    box.style.display = 'none';
-  } else {
-    box.style.display = 'block';
-    lista.innerHTML = pendentes.map(p => `⏳ ${p.nome} — ${fmt(getValorPessoa(p.id))}`).join('<br>');
-  }
-}
-
-function getValorPessoa(pessoaId) {
-  return dados.contas.reduce((s,c) => {
-    const resp = c.responsaveis && c.responsaveis.length > 0 ? c.responsaveis : dados.pessoas.map(p=>p.id);
-    if (resp.includes(pessoaId)) return s + c.valor/resp.length;
-    return s;
-  }, 0);
+  if (pendentes.length===0 || dados.mesFechado) { box.style.display='none'; return; }
+  box.style.display = 'block';
+  document.getElementById('pendentes-lista').innerHTML = pendentes.map(p=>`⏳ ${p.nome} — ${fmt(getValorPessoa(p.id))}`).join('<br>');
 }
 
 function render() {
   updateHeader();
   const total = dados.contas.reduce((s,c)=>s+c.valor,0);
   document.getElementById('total-geral').textContent = fmt(total);
-  const pessoasExclusivas = new Set();
-  dados.contas.forEach(c => { if (c.responsaveis && c.responsaveis.length === 1) pessoasExclusivas.add(c.responsaveis[0]); });
-  const pessoasComuns = dados.pessoas.filter(p => !pessoasExclusivas.has(p.id));
-  const totalComum = dados.contas.reduce((s,c) => (!c.responsaveis || c.responsaveis.length !== 1) ? s+c.valor : s, 0);
-  const cada = pessoasComuns.length > 0 ? totalComum / pessoasComuns.length : 0;
-  document.getElementById('total-cada').textContent = cada > 0 ? fmt(cada) : '—';
+  const excl = new Set();
+  dados.contas.forEach(c=>{ if(c.responsaveis&&c.responsaveis.length===1) excl.add(c.responsaveis[0]); });
+  const comuns = dados.pessoas.filter(p=>!excl.has(p.id));
+  const totalComum = dados.contas.reduce((s,c)=>(!c.responsaveis||c.responsaveis.length!==1)?s+c.valor:s,0);
+  const cada = comuns.length>0 ? totalComum/comuns.length : 0;
+  document.getElementById('total-cada').textContent = cada>0 ? fmt(cada) : '—';
   const pagos = dados.pessoas.filter(p=>p.pago).length;
   const pct = dados.pessoas.length>0 ? Math.round((pagos/dados.pessoas.length)*100) : 0;
   document.getElementById('prog-pct').textContent = pct+'%';
   document.getElementById('prog-bar').style.width = pct+'%';
   document.getElementById('prog-sub').textContent = pagos+' de '+dados.pessoas.length+' pessoa'+(dados.pessoas.length!==1?'s':'')+' pagou';
   const fechado = dados.mesFechado;
-  document.getElementById('btn-fechar-mes').style.display = fechado ? 'none' : 'flex';
-  document.getElementById('btn-iniciar-mes').style.display = fechado ? 'flex' : 'none';
+  document.getElementById('btn-fechar-mes').style.display = fechado?'none':'flex';
+  document.getElementById('btn-iniciar-mes').style.display = fechado?'flex':'none';
   const cl = document.getElementById('contas-lista');
-  if (!dados.contas.length) { cl.innerHTML = '<div class="empty">Nenhuma conta cadastrada.<br>Adicione em ✏️ Gerenciar</div>'; }
+  if (!dados.contas.length) { cl.innerHTML='<div class="empty">Nenhuma conta cadastrada.<br>Adicione em ✏️ Gerenciar</div>'; }
   else {
-    cl.innerHTML = dados.contas.map(c => {
-      const respNomes = c.responsaveis && c.responsaveis.length > 0
-        ? c.responsaveis.map(id => { const p = dados.pessoas.find(p=>p.id===id); return p ? p.nome : ''; }).filter(Boolean).join(', ')
-        : 'Todos';
+    cl.innerHTML = dados.contas.map(c=>{
+      const rn = c.responsaveis&&c.responsaveis.length>0 ? c.responsaveis.map(id=>{const p=dados.pessoas.find(p=>p.id===id);return p?p.nome:'';}).filter(Boolean).join(', ') : 'Todos';
       return `<div class="conta-card ${c.pago?'pago':''}">
         <div class="conta-left"><div class="conta-icon">${c.icon||'💡'}</div>
-          <div><div class="conta-nome">${c.nome}</div>
-          <div class="conta-status">${c.pago?'✅ Pago':'Responsável: '+respNomes}</div></div></div>
+          <div><div class="conta-nome">${c.nome}</div><div class="conta-status">${c.pago?'✅ Pago':'Resp: '+rn}</div></div></div>
         <div class="conta-right"><div class="conta-valor">${fmt(c.valor)}</div>
           ${!fechado?`<button class="btn-check" onclick="toggleConta(${c.id})">${c.pago?'✓':''}</button>`:''}</div>
       </div>`;
     }).join('');
   }
   const pg = document.getElementById('pessoas-grid');
-  if (!dados.pessoas.length) { pg.innerHTML = '<div class="empty" style="grid-column:1/-1">Nenhum morador cadastrado.<br>Adicione em ✏️ Gerenciar</div>'; }
+  if (!dados.pessoas.length) { pg.innerHTML='<div class="empty" style="grid-column:1/-1">Nenhum morador cadastrado.<br>Adicione em ✏️ Gerenciar</div>'; }
   else {
-    pg.innerHTML = dados.pessoas.map((p,i) => {
+    pg.innerHTML = dados.pessoas.map((p,i)=>{
       const val = getValorPessoa(p.id);
-      const av = AV_COLORS[i % AV_COLORS.length];
+      const av = AV[i%AV.length];
       const foto = p.foto ? `<img src="${p.foto}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;margin-bottom:8px"/>` : `<div class="pessoa-avatar ${av}">${p.nome.charAt(0).toUpperCase()}</div>`;
       return `<div class="pessoa-card ${p.pago?'pago':''}" onclick="${!fechado?'togglePessoa('+p.id+')':''}">
         ${foto}<div class="pessoa-nome">${p.nome}</div>
@@ -914,11 +684,10 @@ function render() {
 }
 
 function renderGer() {
-
   const gc = document.getElementById('ger-contas');
-  if (!dados.contas.length) { gc.innerHTML = '<div class="empty">Nenhuma conta cadastrada</div>'; }
+  if (!dados.contas.length) { gc.innerHTML='<div class="empty">Nenhuma conta cadastrada</div>'; }
   else {
-    gc.innerHTML = dados.contas.map(c => `
+    gc.innerHTML = dados.contas.map(c=>`
       <div class="ger-card">
         <div>${c.icon||'💡'} <span class="ger-nome">${c.nome}</span></div>
         <div style="display:flex;align-items:center;gap:8px">
@@ -931,33 +700,28 @@ function renderGer() {
       </div>`).join('');
   }
   const gp = document.getElementById('ger-pessoas');
-  if (!dados.pessoas.length) { gp.innerHTML = '<div class="empty">Nenhum morador cadastrado</div>'; }
+  if (!dados.pessoas.length) { gp.innerHTML='<div class="empty">Nenhum morador cadastrado</div>'; }
   else {
-    gp.innerHTML = dados.pessoas.map((p,i) => {
-      const av = AV_COLORS[i % AV_COLORS.length];
-      const avatar = p.foto
+    gp.innerHTML = dados.pessoas.map((p,i)=>{
+      const av = AV[i%AV.length];
+      const foto = p.foto
         ? `<img src="${p.foto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;cursor:pointer" onclick="escolherFoto(${p.id})" title="Trocar foto"/>`
-        : `<div class="pessoa-avatar ${av}" style="margin:0;width:36px;height:36px;font-size:13px;cursor:pointer" onclick="escolherFoto(${p.id})" title="Adicionar foto">${p.nome.charAt(0).toUpperCase()}</div>`;
+        : `<div class="pessoa-avatar ${av}" style="margin:0;width:36px;height:36px;font-size:13px;cursor:pointer" onclick="escolherFoto(${p.id})">${p.nome.charAt(0).toUpperCase()}</div>`;
       return `<div class="ger-card">
         <div style="display:flex;align-items:center;gap:10px">
-          ${avatar}
-          <div>
-            <span class="ger-nome">${p.nome}</span>
-            <div style="font-size:10px;color:#94a3b8;margin-top:2px">${p.foto ? '📷 Trocar foto' : '📷 Adicionar foto'}</div>
-          </div>
+          ${foto}
+          <div><span class="ger-nome">${p.nome}</span>
+          <div style="font-size:10px;color:#94a3b8;margin-top:2px">${p.foto?'Trocar foto':'Adicionar foto'}</div></div>
         </div>
         <div class="ger-actions"><button class="btn-ger-del" onclick="deletarPessoa(${p.id})">🗑</button></div>
       </div>`;
     }).join('');
   }
-}
-
-// Input de arquivo oculto para foto
-if (!document.getElementById('input-foto-hidden')) {
-  const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'input-foto-hidden';
-  inp.style.display = 'none';
-  document.body.appendChild(inp);
+  if (!document.getElementById('input-foto-hidden')) {
+    const inp = document.createElement('input');
+    inp.type='file'; inp.accept='image/*'; inp.id='input-foto-hidden'; inp.style.display='none';
+    document.body.appendChild(inp);
+  }
 }
 
 function escolherFoto(pessoaId) {
@@ -965,40 +729,32 @@ function escolherFoto(pessoaId) {
   inp.onchange = function() {
     const file = inp.files[0];
     if (!file) return;
-    // Reduz tamanho da imagem antes de salvar
     const reader = new FileReader();
     reader.onload = function(e) {
       const img = new Image();
       img.onload = function() {
         const canvas = document.createElement('canvas');
         const max = 200;
-        let w = img.width, h = img.height;
-        if (w > h) { if (w > max) { h = h*max/w; w = max; } }
-        else { if (h > max) { w = w*max/h; h = max; } }
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        const fotoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        const p = dados.pessoas.find(p => p.id === pessoaId);
-        if (p) {
-          p.foto = fotoBase64;
-          save();
-          render();
-          renderGer();
-          showToast('📷 Foto atualizada!');
-        }
+        let w=img.width, h=img.height;
+        if(w>h){if(w>max){h=h*max/w;w=max;}}else{if(h>max){w=w*max/h;h=max;}}
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        const fotoB64 = canvas.toDataURL('image/jpeg',0.7);
+        const p = dados.pessoas.find(p=>p.id===pessoaId);
+        if(p){ p.foto=fotoB64; save(); render(); renderGer(); showToast('Foto atualizada!'); }
       };
-      img.src = e.target.result;
+      img.src=e.target.result;
     };
     reader.readAsDataURL(file);
-    inp.value = '';
+    inp.value='';
   };
   inp.click();
 }
 
 function renderHistorico() {
   const hl = document.getElementById('historico-lista');
-  if (!dados.historico.length) { hl.innerHTML = '<div class="empty">Nenhum mês fechado ainda</div>'; return; }
-  hl.innerHTML = [...dados.historico].reverse().map(h => `
+  if (!dados.historico.length) { hl.innerHTML='<div class="empty">Nenhum mês fechado ainda</div>'; return; }
+  hl.innerHTML = [...dados.historico].reverse().map(h=>`
     <div class="hist-card">
       <div class="hist-header" onclick="this.nextElementSibling.classList.toggle('open')">
         <div class="hist-mes">📅 ${h.mes}</div><div class="hist-total">${fmt(h.total)}</div>
@@ -1007,197 +763,160 @@ function renderHistorico() {
         ${(h.contas||[]).map(c=>`<div class="hist-row"><span>${c.icon||'💡'} ${c.nome}</span><span>${fmt(c.valor)}</span></div>`).join('')}
         <div class="hist-row" style="font-weight:700"><span>Cada um pagou</span><span>${fmt(h.cada)}</span></div>
         <div class="hist-pessoas">${(h.pessoas||[]).map(p=>{
-          const fotoHtml = p.foto ? `<img src="${p.foto}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px"/>` : '';
+          const fotoHtml = p.foto?`<img src="${p.foto}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px"/>`:'';
           return `<span class="hist-pessoa-chip ${p.pago?'chip-ok':'chip-nao'}">${fotoHtml}${p.nome} ${p.pago?'✅':'⏳'}</span>`;
         }).join('')}</div>
       </div>
     </div>`).join('');
 }
 
-function renderResponsaveis(selecionados) {
-  const el = document.getElementById('input-responsaveis');
-  el.innerHTML = dados.pessoas.map(p => `<span class="resp-chip ${selecionados.includes(p.id)?'sel':''}" onclick="toggleResp(${p.id},this)">${p.nome}</span>`).join('');
+function renderResponsaveis(sel) {
+  document.getElementById('input-responsaveis').innerHTML = dados.pessoas.map(p=>`
+    <span class="resp-chip ${sel.includes(p.id)?'sel':''}" onclick="toggleResp(${p.id},this)">${p.nome}</span>`).join('');
 }
-function toggleResp(id, el) { el.classList.toggle('sel'); }
-function getResponsaveisSelecionados() {
+function toggleResp(id,el) { el.classList.toggle('sel'); }
+function getResps() {
   return Array.from(document.querySelectorAll('#input-responsaveis .resp-chip.sel'))
-    .map(el => { const p = dados.pessoas.find(p => p.nome === el.textContent.trim()); return p ? p.id : null; }).filter(Boolean);
+    .map(el=>{ const p=dados.pessoas.find(p=>p.nome===el.textContent.trim()); return p?p.id:null; }).filter(Boolean);
 }
 
 function abrirModalConta() {
-  editContaId = null;
-  document.getElementById('modal-conta-titulo').textContent = '➕ Nova Conta';
-  document.getElementById('input-conta-nome').value = '';
-  document.getElementById('input-conta-valor').value = '';
-  document.getElementById('input-conta-icon').value = '📶';
+  editContaId=null;
+  document.getElementById('modal-conta-titulo').textContent='Nova Conta';
+  document.getElementById('input-conta-nome').value='';
+  document.getElementById('input-conta-valor').value='';
+  document.getElementById('input-conta-icon').value='📶';
   renderResponsaveis([]);
   abrirModal('modal-conta');
 }
-
 function editarConta(id) {
-  editContaId = id;
-  const c = dados.contas.find(c=>c.id===id);
-  document.getElementById('modal-conta-titulo').textContent = '✏️ Editar Conta';
-  document.getElementById('input-conta-nome').value = c.nome;
-  document.getElementById('input-conta-valor').value = c.valor;
-  document.getElementById('input-conta-icon').value = c.icon||'💡';
+  editContaId=id;
+  const c=dados.contas.find(c=>c.id===id);
+  document.getElementById('modal-conta-titulo').textContent='Editar Conta';
+  document.getElementById('input-conta-nome').value=c.nome;
+  document.getElementById('input-conta-valor').value=c.valor;
+  document.getElementById('input-conta-icon').value=c.icon||'💡';
   renderResponsaveis(c.responsaveis||[]);
   abrirModal('modal-conta');
 }
-
 function salvarConta() {
-  const nome = document.getElementById('input-conta-nome').value.trim();
-  const valor = parseFloat(document.getElementById('input-conta-valor').value);
-  const icon = document.getElementById('input-conta-icon').value;
-  if (!nome) { showToast('⚠️ Informe o nome'); return; }
-  if (!valor||valor<=0) { showToast('⚠️ Informe um valor válido'); return; }
-  const resp = getResponsaveisSelecionados();
-  if (editContaId) {
-    const c = dados.contas.find(c=>c.id===editContaId);
-    if (c) { c.nome=nome; c.valor=valor; c.icon=icon; c.responsaveis=resp; }
-    showToast('✅ Conta atualizada!');
+  const nome=document.getElementById('input-conta-nome').value.trim();
+  const valor=parseFloat(document.getElementById('input-conta-valor').value);
+  const icon=document.getElementById('input-conta-icon').value;
+  if(!nome){showToast('Informe o nome');return;}
+  if(!valor||valor<=0){showToast('Informe um valor válido');return;}
+  const resp=getResps();
+  if(editContaId){
+    const c=dados.contas.find(c=>c.id===editContaId);
+    if(c){c.nome=nome;c.valor=valor;c.icon=icon;c.responsaveis=resp;}
+    showToast('Conta atualizada!');
   } else {
-    dados.contas.push({ id:dados.nextId++, nome, valor, icon, pago:false, responsaveis:resp });
-    showToast('✅ '+nome+' adicionada!');
+    dados.contas.push({id:dados.nextId++,nome,valor,icon,pago:false,responsaveis:resp});
+    showToast(nome+' adicionada!');
   }
   save(); fecharModal('modal-conta'); render(); renderGer();
 }
-
 function toggleConta(id) {
-  if (dados.mesFechado) return;
-  const c = dados.contas.find(c=>c.id===id);
-  if (c) { c.pago=!c.pago; save(); render(); showToast(c.pago?'✅ '+c.nome+' paga!':'↩️ '+c.nome+' desmarcada'); }
+  if(dados.mesFechado) return;
+  const c=dados.contas.find(c=>c.id===id);
+  if(c){c.pago=!c.pago;save();render();showToast(c.pago?c.nome+' paga!':c.nome+' desmarcada');}
 }
-
 function deletarConta(id) {
-  const c = dados.contas.find(c=>c.id===id);
-  if (!confirm('Remover "'+c.nome+'"?')) return;
-  dados.contas = dados.contas.filter(c=>c.id!==id);
-  save(); render(); renderGer(); showToast('🗑 Conta removida');
+  const c=dados.contas.find(c=>c.id===id);
+  if(!confirm('Remover "'+c.nome+'"?')) return;
+  dados.contas=dados.contas.filter(c=>c.id!==id);
+  save();render();renderGer();showToast('Conta removida');
 }
-
-function abrirModalPessoa() { document.getElementById('input-pessoa-nome').value = ''; abrirModal('modal-pessoa'); }
-
+function abrirModalPessoa() { document.getElementById('input-pessoa-nome').value=''; abrirModal('modal-pessoa'); }
 function salvarPessoa() {
-  const nome = document.getElementById('input-pessoa-nome').value.trim();
-  if (!nome) { showToast('⚠️ Informe o nome'); return; }
-  dados.pessoas.push({ id:dados.nextId++, nome, pago:false });
-  save(); fecharModal('modal-pessoa'); render(); renderGer();
-  showToast('✅ '+nome+' adicionado!');
+  const nome=document.getElementById('input-pessoa-nome').value.trim();
+  if(!nome){showToast('Informe o nome');return;}
+  dados.pessoas.push({id:dados.nextId++,nome,pago:false});
+  save();fecharModal('modal-pessoa');render();renderGer();showToast(nome+' adicionado!');
 }
-
 function togglePessoa(id) {
-  if (dados.mesFechado) return;
-  const p = dados.pessoas.find(p=>p.id===id);
-  if (p) { p.pago=!p.pago; save(); render(); showToast(p.pago?'✅ '+p.nome+' pagou!':'↩️ '+p.nome+' desmarcado'); }
+  if(dados.mesFechado) return;
+  const p=dados.pessoas.find(p=>p.id===id);
+  if(p){p.pago=!p.pago;save();render();showToast(p.pago?p.nome+' pagou!':p.nome+' desmarcado');}
 }
-
 function deletarPessoa(id) {
-  const p = dados.pessoas.find(p=>p.id===id);
-  if (!confirm('Remover "'+p.nome+'"?')) return;
-  dados.pessoas = dados.pessoas.filter(p=>p.id!==id);
-  save(); render(); renderGer(); showToast('🗑 '+p.nome+' removido');
+  const p=dados.pessoas.find(p=>p.id===id);
+  if(!confirm('Remover "'+p.nome+'"?')) return;
+  dados.pessoas=dados.pessoas.filter(p=>p.id!==id);
+  save();render();renderGer();showToast(p.nome+' removido');
 }
 
-function fecharMes() {
-  const total = dados.contas.reduce((s,c)=>s+c.valor,0);
-  const now = new Date(); let mesIdx = now.getMonth(); let mesAno = now.getFullYear();
-  const mesAtualTmp = MESES_NOMES[mesIdx]+'/'+mesAno;
-  if (dados.historico.some(h => h.mes === mesAtualTmp)) { mesIdx += 1; if (mesIdx > 11) { mesIdx = 0; mesAno += 1; } }
-  const mesNome = MESES_NOMES[mesIdx]+'/'+mesAno;
-  if (!confirm('Fechar o mês de '+mesNome+'?')) return;
-  const pessoasExclusivas = new Set();
-  dados.contas.forEach(c => { if (c.responsaveis && c.responsaveis.length === 1) pessoasExclusivas.add(c.responsaveis[0]); });
-  const pessoasComuns = dados.pessoas.filter(p => !pessoasExclusivas.has(p.id));
-  const totalComum = dados.contas.reduce((s,c) => (!c.responsaveis || c.responsaveis.length !== 1) ? s+c.valor : s, 0);
-  const cada = pessoasComuns.length > 0 ? totalComum / pessoasComuns.length : 0;
-  const fotos = window.fbFotos || {};
-  dados.historico.push({ mes:mesNome, total, cada, contas:dados.contas.map(c=>({...c})), pessoas:dados.pessoas.map(p=>({...p, valor:getValorPessoa(p.id), foto: p.foto || fotos[p.id] || null})), data:new Date().toISOString() });
-  dados.mesFechado = true;
-  save(); render(); renderGer();
-  showToast('🔒 Mês fechado! Clique em "Iniciar Novo Mês" para continuar.');
-}
-
-function iniciarNovoMes() {
-  if (!confirm('Iniciar novo mês? Os pagamentos serão zerados.')) return;
-  dados.contas = dados.contas.map(c=>({...c, pago:false}));
-  dados.pessoas = dados.pessoas.map(p=>({...p, pago:false}));
-  dados.mesFechado = false;
-  save(); render(); renderGer();
-  showToast('🚀 Novo mês iniciado!');
+function compartilharLink() {
+  const link = window.location.href;
+  if(navigator.share){navigator.share({title:'Contas de Casa',text:'Acesse o app de divisão de contas!',url:link});}
+  else{navigator.clipboard.writeText(link).then(()=>showToast('Link copiado!')).catch(()=>prompt('Copie o link:',link));}
 }
 
 function alterarSenha() {
-  const atual = document.getElementById('ger-senha-atual').value.trim();
-  const nova = document.getElementById('ger-senha-nova').value.trim();
-  const confirma = document.getElementById('ger-senha-confirma').value.trim();
-
-  // Verifica senha atual
-  const senhaAtual = dados.senha || '';
-  if (senhaAtual && atual !== senhaAtual) {
-    showToast('❌ Senha atual incorreta'); return;
-  }
-  if (!senhaAtual && atual) {
-    showToast('❌ Esta casa não tem senha ainda'); return;
-  }
-  // Verifica nova senha
-  if (nova && nova !== confirma) {
-    showToast('❌ As senhas não coincidem'); return;
-  }
-  if (nova) {
-    dados.senha = nova;
-    showToast('🔒 Senha definida com sucesso!');
-  } else {
-    delete dados.senha;
-    showToast('🔓 Senha removida!');
-  }
-  // Limpa campos
-  document.getElementById('ger-senha-atual').value = '';
-  document.getElementById('ger-senha-nova').value = '';
-  document.getElementById('ger-senha-confirma').value = '';
-  // Invalida tokens de TODOS os dispositivos no Firebase
-  if (window.invalidarTokensAuth) await window.invalidarTokensAuth();
+  const atual=document.getElementById('ger-senha-atual').value.trim();
+  const nova=document.getElementById('ger-senha-nova').value.trim();
+  const confirma=document.getElementById('ger-senha-confirma').value.trim();
+  const senhaAtual=dados.senha||'';
+  if(senhaAtual&&atual!==senhaAtual){showToast('Senha atual incorreta');return;}
+  if(nova&&nova!==confirma){showToast('As senhas não coincidem');return;}
+  if(nova){dados.senha=nova;showToast('Senha definida!');}
+  else{delete dados.senha;showToast('Senha removida!');}
+  document.getElementById('ger-senha-atual').value='';
+  document.getElementById('ger-senha-nova').value='';
+  document.getElementById('ger-senha-confirma').value='';
   save();
 }
 
+function fecharMes() {
+  const total=dados.contas.reduce((s,c)=>s+c.valor,0);
+  const now=new Date(); let mi=now.getMonth(),ano=now.getFullYear();
+  const tmp=MESES[mi]+'/'+ano;
+  if(dados.historico.some(h=>h.mes===tmp)){mi++;if(mi>11){mi=0;ano++;}}
+  const mesNome=MESES[mi]+'/'+ano;
+  if(!confirm('Fechar o mês de '+mesNome+'?')) return;
+  const excl=new Set();
+  dados.contas.forEach(c=>{if(c.responsaveis&&c.responsaveis.length===1)excl.add(c.responsaveis[0]);});
+  const comuns=dados.pessoas.filter(p=>!excl.has(p.id));
+  const totalComum=dados.contas.reduce((s,c)=>(!c.responsaveis||c.responsaveis.length!==1)?s+c.valor:s,0);
+  const cada=comuns.length>0?totalComum/comuns.length:0;
+  const fotos=window.fbFotos||{};
+  dados.historico.push({
+    mes:mesNome,total,cada,
+    contas:dados.contas.map(c=>({...c})),
+    pessoas:dados.pessoas.map(p=>({...p,valor:getValorPessoa(p.id),foto:p.foto||fotos[p.id]||null})),
+    data:new Date().toISOString()
+  });
+  dados.mesFechado=true;
+  save();render();renderGer();showToast('Mês fechado!');
+}
+
+function iniciarNovoMes() {
+  if(!confirm('Iniciar novo mês? Os pagamentos serão zerados.')) return;
+  dados.contas=dados.contas.map(c=>({...c,pago:false}));
+  dados.pessoas=dados.pessoas.map(p=>({...p,pago:false}));
+  dados.mesFechado=false;
+  save();render();renderGer();showToast('Novo mês iniciado!');
+}
+
 function resetarTudo() {
-  if (!confirm('Apagar TODO o histórico?')) return;
-  dados.historico = []; dados.mesFechado = false;
-  save(); render(); renderHistorico();
-  showToast('✅ Histórico apagado!');
+  if(!confirm('Apagar TODO o histórico?')) return;
+  dados.historico=[];dados.mesFechado=false;
+  save();render();renderHistorico();showToast('Histórico apagado!');
 }
 
-function initApp() {
-  load();
-  updateHeader();
-  render();
-}
+function initApp() { load(); updateHeader(); render(); }
 
-// Aguarda Firebase com polling — evita race condition entre módulo e script
-function aguardarFirebase() {
-  if (window.fbReady) {
-    initApp();
-  } else {
-    document.addEventListener('firebase-ready', initApp, { once: true });
-    // Fallback: se demorar mais de 6s, inicia mesmo assim
-    setTimeout(function() {
-      if (!window.fbReady) { window.fbReady = true; initApp(); }
-    }, 6000);
-  }
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', aguardarFirebase);
-} else {
-  aguardarFirebase();
+if (window.fbReady) { initApp(); }
+else {
+  document.addEventListener('firebase-ready', initApp);
+  setTimeout(()=>{ if(!window.fbReady){window.fbReady=true;initApp();} }, 5000);
 }
 </script>
+
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(reg => console.log('SW registrado:', reg.scope))
-      .catch(err => console.log('SW erro:', err));
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
   });
 }
 </script>
