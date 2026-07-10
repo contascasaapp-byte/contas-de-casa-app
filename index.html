@@ -153,7 +153,46 @@ enableNetwork(db);
 let casaId = null;
 let docRef = null;
 let fotosRef = null;
+let authRef = null;
 let ultimoSave = 0;
+
+// Gera token único por dispositivo
+function getDeviceToken() {
+  let token = localStorage.getItem('device_token');
+  if (!token) {
+    token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    localStorage.setItem('device_token', token);
+  }
+  return token;
+}
+
+// Salva token de autenticação no Firebase
+window.salvarTokenAuth = async function(id) {
+  if (!authRef) return;
+  const token = getDeviceToken();
+  localStorage.setItem('auth_' + id, token);
+  await setDoc(authRef, { [token]: true }, { merge: true }).catch(() => {});
+};
+
+// Verifica se o token ainda é válido no Firebase
+window.verificarTokenAuth = async function(id) {
+  const token = localStorage.getItem('auth_' + id);
+  if (!token) return false;
+  try {
+    const snap = await getDoc(doc(db, 'casas', id, 'auth', 'tokens'));
+    if (snap.exists() && snap.data()[token] === true) return true;
+  } catch(e) {}
+  return false;
+};
+
+// Invalida todos os tokens (chamado ao trocar senha)
+window.invalidarTokensAuth = async function() {
+  if (!authRef) return;
+  await setDoc(authRef, {}, { merge: false }).catch(() => {});
+  // Remove token local também
+  const token = localStorage.getItem('device_token');
+  if (token && casaId) localStorage.removeItem('auth_' + casaId);
+};
 
 const urlParams = new URLSearchParams(window.location.search);
 const casaIdUrl = urlParams.get('casa');
@@ -175,6 +214,7 @@ async function iniciarCasa(id) {
   localStorage.setItem('contas_casa_id', casaId);
   docRef = doc(db, 'casas', casaId, 'dados', 'principal');
   fotosRef = doc(db, 'casas', casaId, 'dados', 'fotos');
+  authRef = doc(db, 'casas', casaId, 'auth', 'tokens');
 
   const url = new URL(window.location);
   url.searchParams.set('casa', casaId);
@@ -341,9 +381,9 @@ function mostrarEntrada() {
 async function verificarSenhaLink(id) {
   const idUpper = id.toUpperCase();
   
-  // Verifica se já autenticou antes nessa casa
-  const autenticado = localStorage.getItem('auth_' + idUpper);
-  if (autenticado === 'true') {
+  // Verifica token de autenticação no Firebase
+  const tokenValido = await window.verificarTokenAuth ? window.verificarTokenAuth(idUpper) : false;
+  if (tokenValido) {
     iniciarCasa(id);
     return;
   }
@@ -671,9 +711,9 @@ async function verificarSenha() {
     let parsed = {};
     try { parsed = JSON.parse(dadosCasa.dados || '{}'); } catch {}
     if (parsed.senha === senha) {
-      localStorage.setItem('auth_' + casaIdPendente, 'true');
       document.getElementById('entrada-overlay').style.display = 'none';
       await window.iniciarCasa(casaIdPendente);
+      if (window.salvarTokenAuth) await window.salvarTokenAuth(casaIdPendente);
       casaIdPendente = null;
       initApp();
     } else {
@@ -1142,9 +1182,8 @@ function alterarSenha() {
   document.getElementById('ger-senha-atual').value = '';
   document.getElementById('ger-senha-nova').value = '';
   document.getElementById('ger-senha-confirma').value = '';
-  // Remove autenticação salva — vai pedir senha de novo no próximo acesso
-  const casaId = localStorage.getItem('contas_casa_id');
-  if (casaId) localStorage.removeItem('auth_' + casaId);
+  // Invalida tokens de TODOS os dispositivos no Firebase
+  if (window.invalidarTokensAuth) await window.invalidarTokensAuth();
   save();
 }
 
