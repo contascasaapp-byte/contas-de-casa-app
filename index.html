@@ -155,13 +155,15 @@ let ultimoSave = 0;
 const urlParams = new URLSearchParams(window.location.search);
 const casaIdUrl = urlParams.get('casa');
 
-if (casaIdUrl) {
+const isAdmin = new URLSearchParams(window.location.search).get('admin') === 'true';
+
+if (casaIdUrl && !isAdmin) {
   // Salva loginEm se ainda não tem
   if (!localStorage.getItem('loginEm_' + casaIdUrl.toUpperCase())) {
     localStorage.setItem('loginEm_' + casaIdUrl.toUpperCase(), Date.now().toString());
   }
   iniciarCasa(casaIdUrl);
-} else {
+} else if (!isAdmin) {
   const casaIdLocal = localStorage.getItem('contas_casa_id');
   if (casaIdLocal) {
     // Salva loginEm se ainda não tem
