@@ -655,7 +655,7 @@ function updateHeader() {
   document.getElementById('mes-badge').textContent = badge;
   const nomeCasa = (dados && dados.nomeCasa) ? dados.nomeCasa : 'Contas de Casa';
   document.querySelector('.header h1').textContent = '🏠 ' + nomeCasa;
-  document.title = '🏠 ' + nomeCasa;
+  document.title = nomeCasa;
 }
 
 function getValorPessoa(pid) {
