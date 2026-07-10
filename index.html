@@ -578,6 +578,18 @@ function load() {
   if (dados.mesFechado === undefined) dados.mesFechado = false;
   if (!dados.pessoas) dados.pessoas = [];
   if (!dados.contas) dados.contas = [];
+
+  // Verifica se senha mudou após o login deste dispositivo
+  if (dados.senhaMudouEm && dados.senha) {
+    const casaId = localStorage.getItem('contas_casa_id');
+    const loginEm = parseInt(localStorage.getItem('loginEm_' + casaId) || '0');
+    if (dados.senhaMudouEm > loginEm && loginEm > 0) {
+      localStorage.removeItem('contas_casa_id');
+      localStorage.removeItem('loginEm_' + casaId);
+      setTimeout(() => { window.location.href = window.location.pathname; }, 100);
+      return;
+    }
+  }
 }
 
 window.syncFromCloud = function(nd) {
