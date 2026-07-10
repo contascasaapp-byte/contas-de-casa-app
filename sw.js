@@ -1,4 +1,4 @@
-const CACHE_NAME = 'contas-de-casa-v1';
+const CACHE_NAME = 'contas-de-casa-v2';
 const urlsToCache = [
   '/contas-de-casa-app/',
   '/contas-de-casa-app/index.html',
