@@ -158,12 +158,13 @@ const casaIdUrl = urlParams.get('casa');
 const isAdmin = new URLSearchParams(window.location.search).get('admin') === 'true';
 
 if (isAdmin) {
-  // Modo admin — sempre mostra tela de entrada
-  window.fbReady = false;
+  // Modo admin — mostra tela de entrada mas Firebase fica pronto
+  window.fbReady = true;
   document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('entrada-overlay');
     if (el) el.style.display = 'flex';
   });
+  document.dispatchEvent(new Event('firebase-ready'));
 } else if (casaIdUrl) {
   if (!localStorage.getItem('loginEm_' + casaIdUrl.toUpperCase())) {
     localStorage.setItem('loginEm_' + casaIdUrl.toUpperCase(), Date.now().toString());
@@ -484,12 +485,17 @@ let editContaId = null;
 let casaIdPendente = null;
 
 // === ADMIN ===
-document.addEventListener('DOMContentLoaded', () => {
+function verificarAdmin() {
   if (new URLSearchParams(window.location.search).get('admin') === 'true') {
     const btn = document.getElementById('btn-criar-casa');
     if (btn) btn.style.display = 'block';
   }
-});
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', verificarAdmin);
+} else {
+  verificarAdmin();
+}
 
 // === ENTRADA ===
 function mostrarEntrar() {
