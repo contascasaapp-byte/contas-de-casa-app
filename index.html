@@ -127,6 +127,19 @@
   .entrada-btn { width: 100%; background: #f97316; color: white; border: none; border-radius: 10px; padding: 13px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 12px; }
   .entrada-btn-sec { width: 100%; background: transparent; color: #0f3460; border: 2px solid #0f3460; border-radius: 10px; padding: 11px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
   .entrada-erro { font-size: 12px; color: #ef4444; margin-bottom: 8px; display: none; }
+
+  /* Tutorial */
+  .tutorial-overlay { position: fixed; bottom: 0; left: 0; right: 0; z-index: 88888; pointer-events: none; padding: 0 12px 12px; }
+  .tutorial-box { background: white; border-radius: 16px; padding: 14px 16px; box-shadow: 0 -4px 24px rgba(0,0,0,0.15); border: 2px solid #f97316; pointer-events: all; }
+  .tutorial-box-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .tutorial-icon { font-size: 24px; }
+  .tutorial-titulo { font-size: 14px; font-weight: 800; color: #0f3460; }
+  .tutorial-texto { font-size: 12px; color: #64748b; line-height: 1.5; margin-bottom: 10px; }
+  .tutorial-passo { font-size: 10px; color: #94a3b8; margin-bottom: 8px; }
+  .tutorial-actions { display: flex; gap: 8px; align-items: center; }
+  .tutorial-btn { flex: 1; background: #f97316; color: white; border: none; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .tutorial-pular { background: transparent; color: #94a3b8; border: none; font-size: 11px; cursor: pointer; padding: 6px; white-space: nowrap; }
+  .tutorial-highlight { position: fixed; z-index: 88887; border: 3px solid #f97316; border-radius: 12px; pointer-events: none; transition: all 0.4s; }
 </style>
 
 <script type="module">
@@ -456,6 +469,21 @@ window.aplicarFotos = function() {
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="tutorial-highlight" id="tutorial-highlight" style="display:none"></div>
+<div class="tutorial-overlay" id="tutorial-overlay" style="display:none">
+  <div class="tutorial-box">
+    <div class="tutorial-box-header">
+      <div class="tutorial-icon" id="tutorial-icon">🏠</div>
+      <div class="tutorial-titulo" id="tutorial-titulo">Bem-vindo ao Contas de Casa!</div>
+    </div>
+    <div class="tutorial-texto" id="tutorial-texto">Este app ajuda você a dividir as contas da sua casa de forma fácil e organizada.</div>
+    <div class="tutorial-passo" id="tutorial-passo">Passo 1 de 7</div>
+    <div class="tutorial-actions">
+      <button class="tutorial-btn" id="tutorial-btn" onclick="proximoPasso()">Próximo →</button>
+      <button class="tutorial-pular" onclick="fecharTutorial()">Pular</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -557,7 +585,7 @@ async function criarCasa() {
   await window.iniciarCasa(id);
   dados = JSON.parse(JSON.stringify(DEFAULTS));
   dados.nomeCasa = nome;
-  if (senha) dados.senha = senha;
+  dados.senha = senha || '12345'; // senha padrão
   save();
   document.getElementById('modo-criar').style.display = 'none';
   document.getElementById('modo-sucesso').style.display = 'block';
@@ -948,13 +976,165 @@ function iniciarNovoMes() {
   save();render();renderGer();showToast('Novo mês iniciado!');
 }
 
+// === TUTORIAL INTERATIVO ===
+const PASSOS_TUTORIAL = [
+  {
+    icon: '🏠',
+    titulo: 'Bem-vindo ao Contas de Casa!',
+    texto: 'Este app divide as contas da sua casa de forma fácil. Vamos aprender fazendo — siga cada passo!',
+    tab: null, acao: null, btn: 'Vamos começar!'
+  },
+  {
+    icon: '👥',
+    titulo: 'Passo 1 — Moradores',
+    texto: 'Vá em ✏️ Gerenciar → clique em + Adicionar na seção Moradores → cadastre o primeiro morador da casa.',
+    tab: 'gerenciar', acao: 'morador', btn: 'Próximo →', bloqueado: true
+  },
+  {
+    icon: '💡',
+    titulo: 'Passo 2 — Adicionar Conta',
+    texto: 'Clique em + Adicionar em Contas. Preencha nome, valor e ícone. No campo QUEM PAGA: deixe vazio para todos dividirem. Ou toque nos nomes para selecionar quem paga (fica azul). Ex: só o João paga o Netflix.',
+    tab: 'gerenciar', acao: 'conta', btn: 'Próximo →', bloqueado: true
+  },
+  {
+    icon: '🔗',
+    titulo: 'Passo 3 — Compartilhar',
+    texto: 'Use o botão Compartilhar link para enviar o acesso da casa para os outros moradores. Cada um abre o link e tem acesso ao app!',
+    tab: 'gerenciar', acao: null, btn: 'Entendi!'
+  },
+  {
+    icon: '🔒',
+    titulo: 'Passo 3 — Senha de Acesso',
+    texto: 'Em Segurança você pode alterar a senha de acesso da casa. A senha padrão é: 12345. Recomendamos trocar assim que possível!',
+    tab: 'gerenciar', acao: null, btn: 'Entendi!'
+  },
+  {
+    icon: '📊',
+    titulo: 'Passo 4 — Tela Inicial',
+    texto: 'Na aba 🏠 Início você vê o TOTAL DO MÊS (soma de todas as contas) e CADA UM PAGA (divisão igualitária das contas compartilhadas). Quem tem conta individual paga o valor dela separado.',
+    tab: 'inicio', acao: null, btn: 'Entendi!'
+  },
+  {
+    icon: '✅',
+    titulo: 'Passo 4 — Marcar Pagamentos',
+    texto: 'Clique no card do morador para marcar que ele pagou a parte dele. Ou clique no botão circular da conta para marcá-la como paga. Tudo fica verde quando pago!',
+    tab: 'inicio', acao: 'pagamento', btn: 'Próximo →', bloqueado: true
+  },
+  {
+    icon: '⚠️',
+    titulo: 'Passo 5 — Pendentes',
+    texto: 'O aviso laranja mostra quem ainda não pagou e quanto deve. Ótimo para saber quem cobrar no final do mês!',
+    tab: 'inicio', acao: null, btn: 'Entendi!'
+  },
+  {
+    icon: '🗓️',
+    titulo: 'Passo 6 — Fechar o Mês',
+    texto: 'Ao final do mês clique em 🔒 Fechar Mês para salvar o histórico com todos os dados do mês.',
+    tab: 'inicio', acao: null, btn: 'Entendi!'
+  },
+  {
+    icon: '🚀',
+    titulo: 'Passo 6 — Novo Mês',
+    texto: 'Após fechar, clique em 🚀 Iniciar Novo Mês para zerar os pagamentos e começar o próximo mês. As contas e moradores permanecem cadastrados!',
+    tab: 'inicio', acao: null, btn: 'Entendi!'
+  },
+  {
+    icon: '📜',
+    titulo: 'Passo 7 — Histórico',
+    texto: 'Na aba 📜 Histórico você vê todos os meses anteriores. Clique em qualquer mês para ver as contas, valores e quem pagou!',
+    tab: 'historico', acao: null, btn: 'Começar a usar! 🚀'
+  }
+];
+
+let passoAtual = 0;
+let tutorialMoradores = 0;
+let tutorialContas = 0;
+let tutorialPagamentos = 0;
+let tutorialAtivo = false;
+
+function iniciarTutorial() {
+  const casaId = localStorage.getItem('contas_casa_id');
+  if (!casaId) return;
+  const jaViu = localStorage.getItem('tutorial_' + casaId);
+  if (jaViu) return;
+  tutorialAtivo = true;
+  tutorialMoradores = dados.pessoas.length;
+  tutorialContas = dados.contas.length;
+  tutorialPagamentos = dados.pessoas.filter(p=>p.pago).length;
+  passoAtual = 0;
+  mostrarPasso(0);
+  document.getElementById('tutorial-overlay').style.display = 'flex';
+}
+
+function mostrarPasso(i) {
+  const passo = PASSOS_TUTORIAL[i];
+  document.getElementById('tutorial-icon').textContent = passo.icon;
+  document.getElementById('tutorial-titulo').textContent = passo.titulo;
+  document.getElementById('tutorial-texto').textContent = passo.texto;
+  document.getElementById('tutorial-passo').textContent = 'Passo ' + (i+1) + ' de ' + PASSOS_TUTORIAL.length;
+  const btn = document.getElementById('tutorial-btn');
+  btn.textContent = passo.btn;
+  btn.disabled = passo.bloqueado || false;
+  btn.style.opacity = passo.bloqueado ? '0.4' : '1';
+  btn.style.cursor = passo.bloqueado ? 'not-allowed' : 'pointer';
+  if (passo.tab) {
+    const tabBtn = document.querySelector('.tab-btn[onclick*="' + passo.tab + '"]');
+    if (tabBtn) showTab(passo.tab, tabBtn);
+  }
+  // Inicia monitoramento da ação
+  if (passo.acao) monitorarAcao(passo.acao);
+}
+
+function monitorarAcao(acao) {
+  const intervalo = setInterval(() => {
+    if (!tutorialAtivo) { clearInterval(intervalo); return; }
+    let concluido = false;
+    if (acao === 'morador' && dados.pessoas.length > tutorialMoradores) concluido = true;
+    if (acao === 'conta' && dados.contas.length > tutorialContas) concluido = true;
+    if (acao === 'pagamento' && dados.pessoas.filter(p=>p.pago).length > tutorialPagamentos) concluido = true;
+    if (concluido) {
+      clearInterval(intervalo);
+      const btn = document.getElementById('tutorial-btn');
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+      // Atualiza texto confirmando a ação
+      const textoEl = document.getElementById('tutorial-texto');
+      const textoAtual = textoEl.textContent;
+      const novoTexto = textoAtual.replace(/⏳.*/, '✅ Feito! Clique em Próximo para continuar.');
+      textoEl.textContent = novoTexto;
+      showToast('✅ Muito bem! Continue o tutorial.');
+    }
+  }, 500);
+}
+
+function proximoPasso() {
+  const passo = PASSOS_TUTORIAL[passoAtual];
+  if (passo.bloqueado && document.getElementById('tutorial-btn').disabled) return;
+  passoAtual++;
+  if (passoAtual >= PASSOS_TUTORIAL.length) {
+    fecharTutorial();
+  } else {
+    mostrarPasso(passoAtual);
+  }
+}
+
+function fecharTutorial() {
+  tutorialAtivo = false;
+  document.getElementById('tutorial-overlay').style.display = 'none';
+  const casaId = localStorage.getItem('contas_casa_id');
+  if (casaId) localStorage.setItem('tutorial_' + casaId, 'visto');
+  const tabBtn = document.querySelector('.tab-btn[onclick*="inicio"]');
+  if (tabBtn) showTab('inicio', tabBtn);
+}
+
 function resetarTudo() {
   if(!confirm('Apagar TODO o histórico?')) return;
   dados.historico=[];dados.mesFechado=false;
   save();render();renderHistorico();showToast('Histórico apagado!');
 }
 
-function initApp() { load(); updateHeader(); render(); }
+function initApp() { load(); updateHeader(); render(); setTimeout(iniciarTutorial, 800); }
 
 if (window.fbReady) { initApp(); }
 else {
