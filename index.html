@@ -156,64 +156,65 @@ let fotosRef = null;
 let authRef = null;
 let ultimoSave = 0;
 
-// Gera token único por dispositivo
+// ====== TOKEN DE AUTH ======
 function getDeviceToken() {
-  let token = localStorage.getItem('device_token');
-  if (!token) {
-    token = Math.random().toString(36).substring(2) + Date.now().toString(36);
-    localStorage.setItem('device_token', token);
-  }
-  return token;
+  let t = localStorage.getItem('device_token');
+  if (!t) { t = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('device_token', t); }
+  return t;
 }
 
-// Salva token de autenticação no Firebase
 window.salvarTokenAuth = async function(id) {
   if (!authRef) return;
-  const token = getDeviceToken();
-  localStorage.setItem('auth_' + id, token);
-  await setDoc(authRef, { [token]: true }, { merge: true }).catch(() => {});
+  const t = getDeviceToken();
+  localStorage.setItem('auth_' + id, t);
+  setDoc(authRef, { [t]: true }, { merge: true }).catch(() => {});
 };
 
-// Verifica se o token ainda é válido no Firebase
 window.verificarTokenAuth = async function(id) {
-  const token = localStorage.getItem('auth_' + id);
-  if (!token) return false;
+  const t = localStorage.getItem('auth_' + id);
+  if (!t) return false;
   try {
     const snap = await getDoc(doc(db, 'casas', id, 'auth', 'tokens'));
-    if (snap.exists() && snap.data()[token] === true) return true;
-  } catch(e) {}
-  return false;
+    return snap.exists() && snap.data()[t] === true;
+  } catch(e) { return false; }
 };
 
-// Invalida todos os tokens (chamado ao trocar senha)
 window.invalidarTokensAuth = async function() {
   if (!authRef) return;
-  await setDoc(authRef, {}, { merge: false }).catch(() => {});
-  // Remove token local também
-  const token = localStorage.getItem('device_token');
-  if (token && casaId) localStorage.removeItem('auth_' + casaId);
+  setDoc(authRef, {}, { merge: false }).catch(() => {});
+  if (casaId) localStorage.removeItem('auth_' + casaId);
 };
 
+// ====== INICIALIZAÇÃO ======
 const urlParams = new URLSearchParams(window.location.search);
 const casaIdUrl = urlParams.get('casa');
 
 if (casaIdUrl) {
+  // Acesso por link — verifica senha
   verificarSenhaLink(casaIdUrl);
 } else {
   const casaIdLocal = localStorage.getItem('contas_casa_id');
   if (casaIdLocal) {
     iniciarCasa(casaIdLocal);
   } else {
+    // Sem casa — mostra tela de entrada
     window.fbReady = false;
-    // Mostra tela de entrada (DOMContentLoaded pode já ter passado)
+    function tryMostrar() {
+      if (typeof window.mostrarEntrada === 'function') {
+        window.mostrarEntrada();
+      } else {
+        setTimeout(tryMostrar, 100);
+      }
+    }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => mostrarEntrada());
+      document.addEventListener('DOMContentLoaded', tryMostrar);
     } else {
-      mostrarEntrada();
+      tryMostrar();
     }
   }
 }
 
+// ====== INICIAR CASA ======
 async function iniciarCasa(id) {
   casaId = id.toUpperCase();
   localStorage.setItem('contas_casa_id', casaId);
@@ -225,58 +226,52 @@ async function iniciarCasa(id) {
   url.searchParams.set('casa', casaId);
   window.history.replaceState({}, '', url);
 
-  // Carrega dados do localStorage primeiro (instantâneo)
+  // Carrega localStorage imediatamente
   const localKey = 'casa_dados_' + casaId;
   const localFotosKey = 'casa_fotos_' + casaId;
   const localDados = localStorage.getItem(localKey);
-  const localFotos = localStorage.getItem(localFotosKey);
-
   if (localDados) {
-    try {
-      window.fbData = { dados: localDados };
-      window.fbFotos = localFotos ? JSON.parse(localFotos) : {};
-    } catch(e) {}
+    window.fbData = { dados: localDados };
+    try { window.fbFotos = JSON.parse(localStorage.getItem(localFotosKey) || '{}'); } catch { window.fbFotos = {}; }
   }
 
-  // Dispara o app imediatamente com dados locais
+  // Dispara app com dados locais
   window.fbReady = true;
+  function dispararReady() { document.dispatchEvent(new Event('firebase-ready')); }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => document.dispatchEvent(new Event('firebase-ready')));
+    document.addEventListener('DOMContentLoaded', dispararReady);
   } else {
-    document.dispatchEvent(new Event('firebase-ready'));
+    dispararReady();
   }
 
-  // Sincroniza com Firebase em background
+  // Sincroniza Firebase em background
   try {
     const snap = await getDoc(docRef);
     if (snap.exists()) {
       const fbDados = snap.data();
-      // Usa Firebase se for mais recente ou se não tiver local
-      if (!localDados || (fbDados.ultimoSave && fbDados.ultimoSave > (JSON.parse(localDados).ultimoSave || 0))) {
+      const localTs = localDados ? (JSON.parse(localDados).ultimoSave || 0) : 0;
+      const fbTs = fbDados.ultimoSave || 0;
+      if (!localDados || fbTs > localTs) {
         window.fbData = fbDados;
         localStorage.setItem(localKey, fbDados.dados || '{}');
-        if (typeof window.syncFromCloud === 'function') {
-          try { window.syncFromCloud(JSON.parse(fbDados.dados || '{}')); } catch(e) {}
-        }
+        try {
+          const nd = JSON.parse(fbDados.dados || '{}');
+          if (typeof window.syncFromCloud === 'function') window.syncFromCloud(nd);
+        } catch(e) {}
       }
     }
-    // Carregar fotos do Firebase
     const snapFotos = await getDoc(fotosRef);
     if (snapFotos.exists()) {
       window.fbFotos = snapFotos.data().fotos || {};
       localStorage.setItem(localFotosKey, JSON.stringify(window.fbFotos));
       if (typeof window.aplicarFotos === 'function') window.aplicarFotos();
     }
-  } catch(e) {
-    console.log('Firebase sync error:', e);
-  }
+  } catch(e) { console.log('Firebase sync:', e); }
 
-  // Listener para mudanças em tempo real (outros dispositivos)
-  onSnapshot(docRef, (snap) => {
-    if (!snap.exists()) return;
-    if (Date.now() - ultimoSave < 3000) return; // ignora eco do próprio save
+  // Listener tempo real
+  onSnapshot(docRef, snap => {
+    if (!snap.exists() || Date.now() - ultimoSave < 3000) return;
     window.fbData = snap.data();
-    const localKey = 'casa_dados_' + casaId;
     localStorage.setItem(localKey, snap.data().dados || '{}');
     try {
       const nd = JSON.parse(snap.data().dados || '{}');
@@ -284,82 +279,63 @@ async function iniciarCasa(id) {
     } catch(e) {}
   });
 
-  onSnapshot(fotosRef, (snap) => {
+  onSnapshot(fotosRef, snap => {
     if (!snap.exists()) return;
     window.fbFotos = snap.data().fotos || {};
-    localStorage.setItem('casa_fotos_' + casaId, JSON.stringify(window.fbFotos));
+    localStorage.setItem(localFotosKey, JSON.stringify(window.fbFotos));
     if (typeof window.aplicarFotos === 'function') window.aplicarFotos();
   });
 }
 
-// Salva no localStorage IMEDIATAMENTE e no Firebase em background
-window.saveToFirebase = async function(data) {
+// ====== SAVE ======
+window.saveToFirebase = function(data) {
   if (!casaId) return;
-  
   const localKey = 'casa_dados_' + casaId;
-  const dataParaSalvar = JSON.parse(JSON.stringify(data));
-  dataParaSalvar.ultimoSave = Date.now();
-  
-  // Extrai fotos antes de salvar
+  const d = JSON.parse(JSON.stringify(data));
+  d.ultimoSave = Date.now();
+
   const fotosMap = {};
-  dataParaSalvar.pessoas = (dataParaSalvar.pessoas||[]).map(p => {
-    if (p.foto) { fotosMap[p.id] = p.foto; delete p.foto; }
-    return p;
-  });
-  dataParaSalvar.historico = (dataParaSalvar.historico||[]).map(h => {
-    h.pessoas = (h.pessoas||[]).map(p => { if(p.foto) delete p.foto; return p; });
-    return h;
-  });
+  d.pessoas = (d.pessoas||[]).map(p => { if (p.foto) { fotosMap[p.id] = p.foto; delete p.foto; } return p; });
+  d.historico = (d.historico||[]).map(h => { h.pessoas = (h.pessoas||[]).map(p => { if(p.foto) delete p.foto; return p; }); return h; });
 
-  const jsonDados = JSON.stringify(dataParaSalvar);
-  
-  // 1. Salva no localStorage IMEDIATAMENTE
-  localStorage.setItem(localKey, jsonDados);
-  window.fbData = { dados: jsonDados };
+  const json = JSON.stringify(d);
+  localStorage.setItem(localKey, json);
+  window.fbData = { dados: json };
 
-  // 2. Salva fotos no localStorage
   if (Object.keys(fotosMap).length > 0) {
-    const novasFotos = {...(window.fbFotos||{}), ...fotosMap};
-    window.fbFotos = novasFotos;
-    localStorage.setItem('casa_fotos_' + casaId, JSON.stringify(novasFotos));
+    const nf = {...(window.fbFotos||{}), ...fotosMap};
+    window.fbFotos = nf;
+    localStorage.setItem('casa_fotos_' + casaId, JSON.stringify(nf));
   }
 
-  // Feedback visual imediato
   const t = document.getElementById('toast');
   if (t && !t.classList.contains('show')) {
-    t.textContent = '✅ Salvo!';
-    t.classList.add('show');
+    t.textContent = '✅ Salvo!'; t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 1500);
   }
 
-  // 3. Salva no Firebase em background (sem bloquear)
   if (docRef) {
     ultimoSave = Date.now();
-    setDoc(docRef, { dados: jsonDados, ultimoSave: ultimoSave }, { merge: true }).catch(e => console.log('Firebase bg save error:', e));
+    setDoc(docRef, { dados: json, ultimoSave: ultimoSave }, { merge: true }).catch(e => console.log(e));
     if (Object.keys(fotosMap).length > 0) {
-      const novasFotos = window.fbFotos;
-      setDoc(fotosRef, { fotos: novasFotos }, { merge: true }).catch(e => console.log('Firebase fotos error:', e));
+      setDoc(fotosRef, { fotos: window.fbFotos }, { merge: true }).catch(e => console.log(e));
     }
   }
 };
 
 window.loadFromFirebase = function() {
   if (!casaId) return null;
-  const localKey = 'casa_dados_' + casaId;
-  const localDados = localStorage.getItem(localKey);
+  const localDados = localStorage.getItem('casa_dados_' + casaId);
   if (localDados) {
     try {
       const d = JSON.parse(localDados);
       const fotos = window.fbFotos || {};
-      d.pessoas = (d.pessoas||[]).map(p => {
-        if (fotos[p.id]) p.foto = fotos[p.id];
-        return p;
-      });
+      d.pessoas = (d.pessoas||[]).map(p => { if (fotos[p.id]) p.foto = fotos[p.id]; return p; });
       return d;
     } catch {}
   }
-  if (window.fbData && window.fbData['dados']) {
-    try { return JSON.parse(window.fbData['dados']); } catch {}
+  if (window.fbData && window.fbData.dados) {
+    try { return JSON.parse(window.fbData.dados); } catch {}
   }
   return null;
 };
@@ -375,67 +351,62 @@ window.aplicarFotos = function() {
   if (alterou && typeof render === 'function') render();
 };
 
-window.mostrarEntrada = mostrarEntrada;
-window.iniciarCasa = iniciarCasa;
-
-function mostrarEntrada() {
+window.mostrarEntrada = function() {
   const el = document.getElementById('entrada-overlay');
   if (el) el.style.display = 'flex';
-}
+};
 
+window.iniciarCasa = iniciarCasa;
+
+// ====== VERIFICAR SENHA (acesso por link) ======
 async function verificarSenhaLink(id) {
   const idUpper = id.toUpperCase();
-  
-  // Verifica token de autenticação no Firebase
-  const tokenValido = await window.verificarTokenAuth ? window.verificarTokenAuth(idUpper) : false;
-  if (tokenValido) {
-    iniciarCasa(id);
-    return;
+
+  // Token válido no Firebase? Entra direto
+  try {
+    const tokenValido = await window.verificarTokenAuth(idUpper);
+    if (tokenValido) { iniciarCasa(id); return; }
+  } catch(e) {}
+
+  // Verifica se tem senha (localStorage primeiro, depois Firebase)
+  let temSenha = false;
+  const localDados = localStorage.getItem('casa_dados_' + idUpper);
+  if (localDados) {
+    try { temSenha = !!JSON.parse(localDados).senha; } catch {}
+  }
+  if (!temSenha) {
+    try {
+      const snap = await getDoc(doc(db, 'casas', idUpper, 'dados', 'principal'));
+      if (snap.exists()) {
+        try { temSenha = !!JSON.parse(snap.data().dados || '{}').senha; } catch {}
+      }
+    } catch(e) {}
   }
 
-  // Primeiro tenta carregar do localStorage
-  const localKey = 'casa_dados_' + idUpper;
-  const localDados = localStorage.getItem(localKey);
-  if (localDados) {
-    try {
-      const parsed = JSON.parse(localDados);
-      if (parsed.senha) {
-        window.setCasaIdPendente(idUpper);
-        document.addEventListener('DOMContentLoaded', () => {
-          mostrarEntrada();
-          document.getElementById('modo-entrar').style.display = 'none';
-          document.getElementById('modo-criar').style.display = 'none';
-          document.getElementById('modo-senha').style.display = 'block';
-        });
-        window.fbData = {};
-        window.fbReady = true;
-        document.dispatchEvent(new Event('firebase-ready'));
-        return;
-      }
-    } catch {}
-  }
-  // Sem dados locais — tenta Firebase
-  try {
-    const snap = await getDoc(doc(db, 'casas', idUpper, 'dados', 'principal'));
-    if (snap.exists()) {
-      let parsed = {};
-      try { parsed = JSON.parse(snap.data().dados || '{}'); } catch {}
-      if (parsed.senha) {
-        window.setCasaIdPendente(idUpper);
-        document.addEventListener('DOMContentLoaded', () => {
-          mostrarEntrada();
-          document.getElementById('modo-entrar').style.display = 'none';
-          document.getElementById('modo-criar').style.display = 'none';
-          document.getElementById('modo-senha').style.display = 'block';
-        });
-        window.fbData = {};
-        window.fbReady = true;
-        document.dispatchEvent(new Event('firebase-ready'));
-        return;
+  if (temSenha) {
+    // Mostra tela de senha
+    window.setCasaIdPendente(idUpper);
+    window.fbReady = false;
+    function mostrarTelaSenha() {
+      if (typeof window.mostrarEntrada === 'function') {
+        window.mostrarEntrada();
+        document.getElementById('modo-entrar').style.display = 'none';
+        document.getElementById('modo-criar').style.display = 'none';
+        document.getElementById('modo-senha').style.display = 'block';
+      } else {
+        setTimeout(mostrarTelaSenha, 100);
       }
     }
-  } catch(e) {}
-  iniciarCasa(id);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', mostrarTelaSenha);
+    } else {
+      mostrarTelaSenha();
+    }
+    window.fbData = {}; window.fbReady = true;
+    document.dispatchEvent(new Event('firebase-ready'));
+  } else {
+    iniciarCasa(id);
+  }
 }
 </script>
 </head>
