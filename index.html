@@ -1169,20 +1169,27 @@ function resetarTudo() {
 
 function initApp() {
   load();
-  // Se Firebase ainda não carregou dados reais, mostra loading
-  if (!window.fbData || !window.fbData['dados']) {
-    document.getElementById('total-geral').textContent = '...';
-    document.getElementById('contas-lista').innerHTML = '<div class="empty">Carregando...</div>';
-    document.getElementById('pessoas-grid').innerHTML = '';
-  }
   updateHeader();
   render();
 }
 
-if (window.fbReady) { initApp(); }
-else {
-  document.addEventListener('firebase-ready', initApp);
-  setTimeout(function() { if (!window.fbReady) { window.fbReady = true; initApp(); } }, 5000);
+// Aguarda Firebase com polling — evita race condition entre módulo e script
+function aguardarFirebase() {
+  if (window.fbReady) {
+    initApp();
+  } else {
+    document.addEventListener('firebase-ready', initApp, { once: true });
+    // Fallback: se demorar mais de 6s, inicia mesmo assim
+    setTimeout(function() {
+      if (!window.fbReady) { window.fbReady = true; initApp(); }
+    }, 6000);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', aguardarFirebase);
+} else {
+  aguardarFirebase();
 }
 </script>
 <script>
