@@ -408,6 +408,15 @@ async function verificarSenhaLink(id) {
       <button class="entrada-btn-criar" onclick="mostrarEntrar()">← Voltar</button>
     </div>
 
+    <div id="modo-sucesso" style="display:none;text-align:center">
+      <div style="font-size:48px;margin-bottom:12px">🎉</div>
+      <div style="font-size:16px;font-weight:800;color:#0f3460;margin-bottom:6px">Casa criada com sucesso!</div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:16px">Guarde o código abaixo — é ele que dá acesso à sua casa!</div>
+      <div id="sucesso-codigo" style="background:#f1f5f9;border:2px dashed #0f3460;border-radius:12px;padding:16px;font-size:28px;font-weight:800;color:#0f3460;letter-spacing:6px;margin-bottom:12px"></div>
+      <button onclick="copiarCodigo()" style="width:100%;background:#f97316;color:white;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px">📋 Copiar código</button>
+      <button onclick="entrarComCodigo()" style="width:100%;background:#0f3460;color:white;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer">🏠 Entrar na casa</button>
+    </div>
+
     <div id="modo-senha" style="display:none">
       <div style="font-size:13px;color:#64748b;margin-bottom:16px">🔒 Esta casa é protegida por senha</div>
       <input class="entrada-input" type="password" id="input-senha-acesso" placeholder="Digite a senha"/>
@@ -672,14 +681,15 @@ function gerarId() {
   return id;
 }
 
+let casaCriadaId = null;
+
 async function criarCasa() {
   const nome = document.getElementById('input-casa-nome').value.trim();
   const senha = document.getElementById('input-casa-senha').value.trim();
   if (!nome) { showToast('⚠️ Informe o nome da casa'); return; }
   const id = gerarId();
-  document.getElementById('entrada-overlay').style.display = 'none';
-  await window.iniciarCasa(id, true);
-  // Aguarda o Firebase estar pronto antes de salvar
+  casaCriadaId = id;
+  await window.iniciarCasa(id);
   await new Promise(resolve => {
     if (window.fbReady) { resolve(); return; }
     document.addEventListener('firebase-ready', resolve, { once: true });
@@ -689,8 +699,24 @@ async function criarCasa() {
   dados.nomeCasa = nome;
   if (senha) dados.senha = senha;
   save();
+  // Mostrar tela de sucesso com o código
+  document.getElementById('modo-criar').style.display = 'none';
+  document.getElementById('modo-sucesso').style.display = 'block';
+  document.getElementById('sucesso-codigo').textContent = id;
+}
+
+function copiarCodigo() {
+  const codigo = document.getElementById('sucesso-codigo').textContent;
+  navigator.clipboard.writeText(codigo).then(() => {
+    showToast('📋 Código copiado!');
+  }).catch(() => {
+    prompt('Copie o código:', codigo);
+  });
+}
+
+function entrarComCodigo() {
+  document.getElementById('entrada-overlay').style.display = 'none';
   initApp();
-  showToast('🏠 Casa "' + nome + '" criada! Código: ' + id);
 }
 
 function load() {
