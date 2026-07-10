@@ -801,7 +801,8 @@ function renderHistorico() {
         ${(h.contas||[]).map(c=>`<div class="hist-row"><span>${c.icon||'💡'} ${c.nome}</span><span>${fmt(c.valor)}</span></div>`).join('')}
         <div class="hist-row" style="font-weight:700"><span>Cada um pagou</span><span>${fmt(h.cada)}</span></div>
         <div class="hist-pessoas">${(h.pessoas||[]).map(p=>{
-          const fotoHtml = p.foto?`<img src="${p.foto}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px"/>`:'';
+          const fotoSrc = p.foto || (h.fotosHistorico && h.fotosHistorico[p.id]) || null;
+          const fotoHtml = fotoSrc?`<img src="${fotoSrc}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px"/>`:'';
           return `<span class="hist-pessoa-chip ${p.pago?'chip-ok':'chip-nao'}">${fotoHtml}${p.nome} ${p.pago?'✅':'⏳'}</span>`;
         }).join('')}</div>
       </div>
@@ -921,12 +922,20 @@ function fecharMes() {
   const comuns=dados.pessoas.filter(p=>!excl.has(p.id));
   const totalComum=dados.contas.reduce((s,c)=>(!c.responsaveis||c.responsaveis.length!==1)?s+c.valor:s,0);
   const cada=comuns.length>0?totalComum/comuns.length:0;
-  const fotos=window.fbFotos||{};
+  // Busca fotos atuais antes de salvar no histórico
+  const fotos = window.fbFotos || {};
+  const pessoasComFoto = dados.pessoas.map(p => ({
+    ...p,
+    valor: getValorPessoa(p.id),
+    foto: p.foto || fotos[p.id] || null
+  }));
+  // Salva fotos também no histórico dentro do campo fotosHistorico
   dados.historico.push({
-    mes:mesNome,total,cada,
-    contas:dados.contas.map(c=>({...c})),
-    pessoas:dados.pessoas.map(p=>({...p,valor:getValorPessoa(p.id),foto:p.foto||fotos[p.id]||null})),
-    data:new Date().toISOString()
+    mes:mesNome, total, cada,
+    contas: dados.contas.map(c=>({...c})),
+    pessoas: pessoasComFoto,
+    fotosHistorico: pessoasComFoto.reduce((acc,p) => { if(p.foto) acc[p.id]=p.foto; return acc; }, {}),
+    data: new Date().toISOString()
   });
   dados.mesFechado=true;
   save();render();renderGer();showToast('Mês fechado!');
