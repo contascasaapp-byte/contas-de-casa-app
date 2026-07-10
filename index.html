@@ -397,7 +397,7 @@ async function verificarSenhaLink(id) {
       <input class="entrada-input" type="text" id="input-casa-id" placeholder="Código da sua casa" maxlength="10" oninput="this.value=this.value.toUpperCase()"/>
       <div class="entrada-erro" id="entrada-erro">Código não encontrado. Verifique e tente novamente.</div>
       <button class="entrada-btn" onclick="entrarCasa()">🚪 Entrar</button>
-      <button class="entrada-btn-criar" onclick="mostrarCriar()">✨ Criar nova casa</button>
+      <button class="entrada-btn-criar" id="btn-criar-casa" onclick="mostrarCriar()" style="display:none">✨ Criar nova casa</button>
     </div>
 
     <div id="modo-criar" style="display:none">
@@ -584,6 +584,15 @@ const DEFAULTS = { contas:[], pessoas:[], historico:[], nextId:1, mesFechado:fal
 
 let dados = {};
 let editContaId = null;
+
+// Mostra botão criar só se ?admin=true na URL
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('admin') === 'true') {
+    const btn = document.getElementById('btn-criar-casa');
+    if (btn) btn.style.display = 'block';
+  }
+});
 
 function mostrarEntrar() {
   document.getElementById('modo-entrar').style.display = 'block';
