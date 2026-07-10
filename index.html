@@ -339,14 +339,23 @@ function mostrarEntrada() {
 }
 
 async function verificarSenhaLink(id) {
+  const idUpper = id.toUpperCase();
+  
+  // Verifica se já autenticou antes nessa casa
+  const autenticado = localStorage.getItem('auth_' + idUpper);
+  if (autenticado === 'true') {
+    iniciarCasa(id);
+    return;
+  }
+
   // Primeiro tenta carregar do localStorage
-  const localKey = 'casa_dados_' + id.toUpperCase();
+  const localKey = 'casa_dados_' + idUpper;
   const localDados = localStorage.getItem(localKey);
   if (localDados) {
     try {
       const parsed = JSON.parse(localDados);
       if (parsed.senha) {
-        window.setCasaIdPendente(id.toUpperCase());
+        window.setCasaIdPendente(idUpper);
         document.addEventListener('DOMContentLoaded', () => {
           mostrarEntrada();
           document.getElementById('modo-entrar').style.display = 'none';
@@ -362,12 +371,12 @@ async function verificarSenhaLink(id) {
   }
   // Sem dados locais — tenta Firebase
   try {
-    const snap = await getDoc(doc(db, 'casas', id.toUpperCase(), 'dados', 'principal'));
+    const snap = await getDoc(doc(db, 'casas', idUpper, 'dados', 'principal'));
     if (snap.exists()) {
       let parsed = {};
       try { parsed = JSON.parse(snap.data().dados || '{}'); } catch {}
       if (parsed.senha) {
-        window.setCasaIdPendente(id.toUpperCase());
+        window.setCasaIdPendente(idUpper);
         document.addEventListener('DOMContentLoaded', () => {
           mostrarEntrada();
           document.getElementById('modo-entrar').style.display = 'none';
@@ -662,8 +671,9 @@ async function verificarSenha() {
     let parsed = {};
     try { parsed = JSON.parse(dadosCasa.dados || '{}'); } catch {}
     if (parsed.senha === senha) {
+      localStorage.setItem('auth_' + casaIdPendente, 'true');
       document.getElementById('entrada-overlay').style.display = 'none';
-      await window.iniciarCasa(casaIdPendente, true);
+      await window.iniciarCasa(casaIdPendente);
       casaIdPendente = null;
       initApp();
     } else {
@@ -1132,6 +1142,9 @@ function alterarSenha() {
   document.getElementById('ger-senha-atual').value = '';
   document.getElementById('ger-senha-nova').value = '';
   document.getElementById('ger-senha-confirma').value = '';
+  // Remove autenticação salva — vai pedir senha de novo no próximo acesso
+  const casaId = localStorage.getItem('contas_casa_id');
+  if (casaId) localStorage.removeItem('auth_' + casaId);
   save();
 }
 
