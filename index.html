@@ -503,6 +503,23 @@ window.aplicarFotos = function() {
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-editar-pessoa">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3>✏️ Editar Morador</h3>
+      <button class="modal-x" onclick="fecharModal('modal-editar-pessoa')">✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="mlabel">Nome</label>
+      <input class="minput" type="text" id="input-editar-pessoa-nome" placeholder="Nome do morador"/>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" onclick="fecharModal('modal-editar-pessoa')">Cancelar</button>
+      <button class="btn-save" onclick="salvarEdicaoPessoa()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-pessoa">
   <div class="modal">
     <div class="modal-hdr">
@@ -935,7 +952,10 @@ function renderGer() {
           <div><span class="ger-nome">${p.nome}</span>
           <div style="font-size:10px;color:#94a3b8;margin-top:2px">${p.foto?'Trocar foto':'Adicionar foto'}</div></div>
         </div>
-        <div class="ger-actions"><button class="btn-ger-del" onclick="deletarPessoa(${p.id})">🗑</button></div>
+        <div class="ger-actions">
+            <button class="btn-ger-edit" onclick="editarPessoa(${p.id})">✏️</button>
+            <button class="btn-ger-del" onclick="deletarPessoa(${p.id})">🗑</button>
+          </div>
       </div>`;
     }).join('');
   }
@@ -1050,6 +1070,30 @@ function deletarConta(id) {
   dados.contas=dados.contas.filter(c=>c.id!==id);
   save();render();renderGer();showToast('Conta removida');
 }
+let editPessoaId = null;
+
+function editarPessoa(id) {
+  editPessoaId = id;
+  const p = dados.pessoas.find(p => p.id === id);
+  if (!p) return;
+  document.getElementById('input-editar-pessoa-nome').value = p.nome;
+  abrirModal('modal-editar-pessoa');
+}
+
+function salvarEdicaoPessoa() {
+  const nome = document.getElementById('input-editar-pessoa-nome').value.trim();
+  if (!nome) { showToast('Informe o nome'); return; }
+  const p = dados.pessoas.find(p => p.id === editPessoaId);
+  if (p) {
+    p.nome = nome;
+    save();
+    fecharModal('modal-editar-pessoa');
+    render();
+    renderGer();
+    showToast('✅ Nome atualizado!');
+  }
+}
+
 function abrirModalPessoa() { document.getElementById('input-pessoa-nome').value=''; abrirModal('modal-pessoa'); }
 function salvarPessoa() {
   const nome=document.getElementById('input-pessoa-nome').value.trim();
