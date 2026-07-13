@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🔧 Admin — Contas de Casa</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #0f172a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+
+  .card { background: #1e293b; border-radius: 20px; padding: 32px 28px; width: 100%; max-width: 420px; border: 1px solid #334155; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+
+  .logo { text-align: center; margin-bottom: 28px; }
+  .logo-icon { font-size: 48px; margin-bottom: 10px; }
+  .logo-titulo { font-size: 20px; font-weight: 800; color: white; }
+  .logo-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+  .aviso { background: #431407; border: 1px solid #c2410c; border-radius: 10px; padding: 12px 14px; margin-bottom: 24px; font-size: 12px; color: #fb923c; line-height: 1.6; }
+  .aviso strong { color: #f97316; }
+
+  .label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 6px; font-weight: 700; }
+  .input { width: 100%; background: #0f172a; border: 1.5px solid #334155; border-radius: 10px; padding: 12px 14px; font-size: 15px; color: white; outline: none; font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 2px; transition: border-color 0.2s; margin-bottom: 16px; }
+  .input:focus { border-color: #f97316; }
+  .input::placeholder { text-transform: none; letter-spacing: 0; color: #475569; font-size: 13px; }
+
+  .btn { width: 100%; background: #f97316; color: white; border: none; border-radius: 10px; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn:hover { background: #ea6c0a; }
+  .btn:disabled { background: #475569; cursor: not-allowed; }
+
+  .resultado { margin-top: 20px; border-radius: 10px; padding: 14px 16px; font-size: 13px; font-weight: 600; display: none; line-height: 1.6; }
+  .resultado.ok { background: #14532d; border: 1px solid #166534; color: #4ade80; display: block; }
+  .resultado.erro { background: #450a0a; border: 1px solid #7f1d1d; color: #f87171; display: block; }
+
+  .info-box { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 14px 16px; margin-top: 20px; }
+  .info-titulo { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 10px; }
+  .info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #1e293b; font-size: 12px; }
+  .info-row:last-child { border: none; padding-bottom: 0; }
+  .info-label { color: #64748b; }
+  .info-valor { color: #e2e8f0; font-weight: 600; font-family: monospace; font-size: 11px; }
+
+  .divider { border: none; border-top: 1px solid #334155; margin: 24px 0; }
+
+  .footer { text-align: center; margin-top: 24px; font-size: 11px; color: #475569; }
+  .footer a { color: #f97316; text-decoration: none; font-weight: 600; }
+
+  /* Login admin */
+  .login-overlay { position: fixed; inset: 0; background: #0f172a; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .login-box { background: #1e293b; border-radius: 20px; padding: 32px 28px; width: 100%; max-width: 360px; border: 1px solid #334155; text-align: center; }
+  .login-icon { font-size: 48px; margin-bottom: 12px; }
+  .login-titulo { font-size: 20px; font-weight: 800; color: white; margin-bottom: 6px; }
+  .login-sub { font-size: 12px; color: #64748b; margin-bottom: 24px; }
+  .login-input { width: 100%; background: #0f172a; border: 1.5px solid #334155; border-radius: 10px; padding: 12px 14px; font-size: 15px; color: white; outline: none; font-family: 'Inter', sans-serif; text-align: center; letter-spacing: 3px; margin-bottom: 12px; transition: border-color 0.2s; }
+  .login-input:focus { border-color: #f97316; }
+  .login-erro { font-size: 12px; color: #f87171; margin-bottom: 10px; display: none; }
+</style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN ADMIN -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-icon">🔐</div>
+    <div class="login-titulo">Área Restrita</div>
+    <div class="login-sub">Digite a senha de administrador para continuar</div>
+    <input class="login-input" type="password" id="input-admin-senha" placeholder="Senha admin" onkeydown="if(event.key==='Enter')entrarAdmin()"/>
+    <div class="login-erro" id="login-erro">Senha incorreta!</div>
+    <button class="btn" onclick="entrarAdmin()">🔓 Entrar</button>
+  </div>
+</div>
+
+<!-- PAINEL ADMIN -->
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">🔧</div>
+    <div class="logo-titulo">Painel Admin</div>
+    <div class="logo-sub">Contas de Casa — MRQ Log</div>
+  </div>
+
+  <div class="aviso">
+    ⚠️ <strong>Atenção:</strong> Esta ferramenta reseta a senha do cliente para <strong>12345</strong>. O cliente será obrigado a criar uma nova senha no próximo acesso. Você <strong>nunca verá</strong> a senha real do cliente.
+  </div>
+
+  <label class="label">Código da Casa</label>
+  <input class="input" type="text" id="input-codigo" placeholder="Ex: 4UTNT4" maxlength="6" oninput="this.value=this.value.toUpperCase(); limparResultado()"/>
+
+  <button class="btn" id="btn-resetar" onclick="resetarSenha()">
+    🔑 Resetar Senha para 12345
+  </button>
+
+  <div class="resultado" id="resultado"></div>
+
+  <hr class="divider"/>
+
+  <div class="info-box">
+    <div class="info-titulo">ℹ️ Como funciona</div>
+    <div class="info-row">
+      <span class="info-label">O que é salvo no Firebase</span>
+      <span class="info-valor">Hash SHA-256</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Senha visível para admin</span>
+      <span class="info-valor">❌ Nunca</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Após reset, cliente acessa com</span>
+      <span class="info-valor">12345</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">App obriga trocar senha?</span>
+      <span class="info-valor">✅ Sempre</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    MRQ Log — <a href="https://wa.me/5534992160329">WhatsApp</a>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDW5lYGiqM9ud3Eb2bDT9GPPQMFuKmXToE",
+  authDomain: "contas-de-casa-app.firebaseapp.com",
+  projectId: "contas-de-casa-app",
+  storageBucket: "contas-de-casa-app.firebasestorage.app",
+  messagingSenderId: "785746658747",
+  appId: "1:785746658747:web:b005a6704db1bee624709e"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Senha do painel admin: "mrqlog2026"
+// Para trocar: gere o SHA-256 da nova senha em https://emn178.github.io/online-tools/sha256.html
+// e substitua a string abaixo
+const SENHA_ADMIN_HASH = "f78f567b97b414424ddd0bebf058cc9a8358378e9d82124784b5f6ea0db86dde";
+
+async function sha256(texto) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(texto);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+
+window.entrarAdmin = async function() {
+  const senha = document.getElementById('input-admin-senha').value.trim();
+  if (!senha) return;
+  const hash = await sha256(senha);
+  if (hash === SENHA_ADMIN_HASH) {
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('input-admin-senha').value = '';
+  } else {
+    document.getElementById('login-erro').style.display = 'block';
+    setTimeout(() => document.getElementById('login-erro').style.display = 'none', 2000);
+  }
+};
+
+window.resetarSenha = async function() {
+  const codigo = document.getElementById('input-codigo').value.trim().toUpperCase();
+  const resultado = document.getElementById('resultado');
+  const btn = document.getElementById('btn-resetar');
+
+  if (!codigo || codigo.length !== 6) {
+    resultado.className = 'resultado erro';
+    resultado.textContent = '⚠️ Digite um código de 6 caracteres válido.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Resetando...';
+  resultado.className = 'resultado';
+  resultado.style.display = 'none';
+
+  try {
+    // Verifica se a casa existe
+    const snap = await getDoc(doc(db, 'casas', codigo, 'dados', 'principal'));
+    if (!snap.exists()) {
+      resultado.className = 'resultado erro';
+      resultado.textContent = `❌ Casa "${codigo}" não encontrada no Firebase.`;
+      return;
+    }
+
+    // Lê os dados atuais para não perder nada
+    let dadosAtuais = {};
+    try { dadosAtuais = JSON.parse(snap.data().dados || '{}'); } catch {}
+
+    // Reseta APENAS a senha para hash do 12345 — nunca outra coisa
+    dadosAtuais.senha = await sha256('12345');
+    dadosAtuais.senhaMudouEm = Date.now();
+
+    // Salva de volta
+    await setDoc(doc(db, 'casas', codigo, 'dados', 'principal'), {
+      dados: JSON.stringify(dadosAtuais)
+    });
+
+    resultado.className = 'resultado ok';
+    resultado.innerHTML = `✅ Senha da casa <strong>${codigo}</strong> resetada com sucesso!<br><br>📱 O cliente deve acessar com: <strong>12345</strong><br>🔒 O app vai obrigar criar uma nova senha.`;
+    document.getElementById('input-codigo').value = '';
+
+  } catch(e) {
+    resultado.className = 'resultado erro';
+    resultado.textContent = '❌ Erro ao acessar o Firebase. Tente novamente.';
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔑 Resetar Senha para 12345';
+  }
+};
+
+window.limparResultado = function() {
+  const resultado = document.getElementById('resultado');
+  resultado.className = 'resultado';
+  resultado.style.display = 'none';
+};
+
+// Enter no campo de código
+document.getElementById('input-codigo').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') window.resetarSenha();
+});
+</script>
+</body>
+</html>
