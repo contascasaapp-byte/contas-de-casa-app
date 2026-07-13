@@ -346,8 +346,10 @@ window.aplicarFotos = function() {
       <div style="font-size:16px;font-weight:800;color:#0f3460;margin-bottom:6px">Casa criada!</div>
       <div style="font-size:13px;color:#64748b;margin-bottom:16px">Guarde este código — é o acesso da sua casa</div>
       <div id="sucesso-codigo" style="background:#f1f5f9;border:2px dashed #0f3460;border-radius:12px;padding:16px;font-size:28px;font-weight:800;color:#0f3460;letter-spacing:6px;margin-bottom:12px"></div>
+      <div id="sucesso-link" style="font-size:11px;color:#64748b;margin-bottom:12px;word-break:break-all"></div>
       <button class="entrada-btn" onclick="copiarCodigo()">Copiar código</button>
-      <button class="entrada-btn-sec" onclick="entrarComSucesso()">Entrar na casa</button>
+      <button class="entrada-btn-sec" id="btn-entrar-sucesso" onclick="entrarComSucesso()">Entrar na casa</button>
+      <button class="entrada-btn-sec" id="btn-nova-casa-sucesso" onclick="mostrarCriar()" style="display:none">+ Criar outra casa</button>
     </div>
 
     <div id="modo-senha" style="display:none">
@@ -738,6 +740,13 @@ async function criarCasa() {
   document.getElementById('modo-criar').style.display = 'none';
   document.getElementById('modo-sucesso').style.display = 'block';
   document.getElementById('sucesso-codigo').textContent = id;
+  // Mostrar link completo
+  const linkCompleto = window.location.origin + window.location.pathname + '?casa=' + id;
+  document.getElementById('sucesso-link').textContent = linkCompleto;
+  // Se for admin, esconde "Entrar na casa" e mostra "Criar outra casa"
+  const isAdmin = new URLSearchParams(window.location.search).get('admin') === 'true';
+  document.getElementById('btn-entrar-sucesso').style.display = isAdmin ? 'none' : 'block';
+  document.getElementById('btn-nova-casa-sucesso').style.display = isAdmin ? 'block' : 'none';
 }
 
 function copiarCodigo() {
