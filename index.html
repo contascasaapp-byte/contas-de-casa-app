@@ -1275,6 +1275,9 @@ function fecharTutorial() {
 }
 
 function verificarSenhaPadrao() {
+  // Não pede troca se for admin
+  const isAdmin = new URLSearchParams(window.location.search).get('admin') === 'true';
+  if (isAdmin) return;
   // Se a senha ainda é a padrão 12345, força troca
   if (dados && dados.senha === '12345') {
     setTimeout(() => {
