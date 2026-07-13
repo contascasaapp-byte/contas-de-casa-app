@@ -128,6 +128,35 @@
   .entrada-btn-sec { width: 100%; background: transparent; color: #0f3460; border: 2px solid #0f3460; border-radius: 10px; padding: 11px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
   .entrada-erro { font-size: 12px; color: #ef4444; margin-bottom: 8px; display: none; }
 
+  /* Modal Política de Privacidade */
+  .modal-politica { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 99999; align-items: center; justify-content: center; padding: 16px; }
+  .modal-politica.open { display: flex; }
+  .modal-politica-box { background: white; border-radius: 16px; width: 100%; max-width: 500px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+  .modal-politica-hdr { background: linear-gradient(90deg,#0f3460,#1e3a5f); padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f97316; flex-shrink: 0; }
+  .modal-politica-hdr h3 { font-size: 14px; font-weight: 700; color: #fbbf24; }
+  .modal-politica-body { padding: 20px; overflow-y: auto; flex: 1; }
+  .politica-titulo { font-size: 11px; font-weight: 700; color: #0f3460; text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 6px; }
+  .politica-texto { font-size: 12px; color: #475569; line-height: 1.7; margin-bottom: 8px; }
+  .politica-destaque { font-size: 12px; color: #0f3460; font-weight: 600; background: #f1f5f9; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #f97316; }
+
+  /* Splash Screen */
+  .splash { position: fixed; inset: 0; background: linear-gradient(135deg, #0f3460, #1e3a5f); z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
+  .splash.hide { opacity: 0; pointer-events: none; }
+  .splash-logo { font-size: 72px; margin-bottom: 16px; animation: pulse 1.5s infinite; }
+  .splash-titulo { font-size: 28px; font-weight: 800; color: white; margin-bottom: 8px; }
+  .splash-sub { font-size: 14px; color: #93c5fd; margin-bottom: 40px; }
+  .splash-loading { display: flex; gap: 8px; }
+  .splash-dot { width: 10px; height: 10px; border-radius: 50%; background: #f97316; animation: bounce 0.8s infinite alternate; }
+  .splash-dot:nth-child(2) { animation-delay: 0.2s; }
+  .splash-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { from { transform: translateY(0); opacity: 0.4; } to { transform: translateY(-12px); opacity: 1; } }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+  /* Rodapé */
+  .footer { text-align: center; padding: 20px 16px; margin-top: 8px; border-top: 1px solid #e2e8f0; }
+  .footer-texto { font-size: 11px; color: #94a3b8; }
+  .footer-link { color: #f97316; font-weight: 600; text-decoration: none; }
+
   /* Tutorial */
   .tutorial-overlay { position: fixed; bottom: 0; left: 0; right: 0; z-index: 88888; pointer-events: none; padding: 0 12px 12px; }
   .tutorial-box { background: white; border-radius: 16px; padding: 14px 16px; box-shadow: 0 -4px 24px rgba(0,0,0,0.15); border: 2px solid #f97316; pointer-events: all; }
@@ -275,6 +304,18 @@ window.aplicarFotos = function() {
 </head>
 <body>
 
+<!-- SPLASH SCREEN -->
+<div class="splash" id="splash">
+  <div class="splash-logo">🏠</div>
+  <div class="splash-titulo">Contas de Casa</div>
+  <div class="splash-sub">Divisão de contas fácil</div>
+  <div class="splash-loading">
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+  </div>
+</div>
+
 <div class="entrada-overlay" id="entrada-overlay" style="display:none">
   <div class="entrada-box">
     <div class="entrada-logo">🏠</div>
@@ -286,6 +327,10 @@ window.aplicarFotos = function() {
       <div class="entrada-erro" id="entrada-erro">Código não encontrado. Verifique e tente novamente.</div>
       <button class="entrada-btn" onclick="entrarCasa()">Entrar</button>
       <button class="entrada-btn-sec" id="btn-criar-casa" onclick="mostrarCriar()" style="display:none">Criar nova casa</button>
+      <div style="margin-top:12px;font-size:11px;color:#94a3b8;text-align:center">
+        Ao usar este app você concorda com nossa<br>
+        <span onclick="document.getElementById('modal-politica').classList.add('open')" style="color:#f97316;font-weight:600;cursor:pointer;text-decoration:underline">Política de Privacidade</span>
+      </div>
     </div>
 
     <div id="modo-criar" style="display:none">
@@ -416,6 +461,11 @@ window.aplicarFotos = function() {
     </div>
   </div>
 
+  <!-- RODAPÉ -->
+  <div class="footer">
+    <div class="footer-texto">Desenvolvido por <strong>MRQ Log</strong> · <a class="footer-link" href="https://wa.me/5534992160329" target="_blank">📱 Fale conosco</a> · <span class="footer-link" style="cursor:pointer" onclick="document.getElementById('modal-politica').classList.add('open')">Privacidade</span></div>
+  </div>
+
 </div>
 
 <div class="modal-overlay" id="modal-conta">
@@ -469,6 +519,50 @@ window.aplicarFotos = function() {
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- MODAL POLÍTICA DE PRIVACIDADE -->
+<div class="modal-politica" id="modal-politica">
+  <div class="modal-politica-box">
+    <div class="modal-politica-hdr">
+      <h3>🔒 Política de Privacidade</h3>
+      <button class="modal-x" onclick="document.getElementById('modal-politica').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-politica-body">
+
+      <div class="politica-destaque">Versão 1.0 — Contas de Casa · MRQ Log</div>
+
+      <div class="politica-titulo">1. Responsável</div>
+      <div class="politica-texto">Miqueias Ribeiro Queiroz (MRQ Log), Uberlândia/MG.<br>Contato: WhatsApp (34) 99216-0329</div>
+
+      <div class="politica-titulo">2. Dados Coletados</div>
+      <div class="politica-texto">O app coleta apenas o que você insere voluntariamente:</div>
+      <div class="politica-destaque">✔ Nomes dos moradores<br>✔ Fotos dos moradores (opcional)<br>✔ Valores e descrições de contas<br>✔ Senha de acesso</div>
+      <div class="politica-texto"><strong>NÃO coletamos:</strong> localização, e-mail, CPF, contatos ou dados bancários.</div>
+
+      <div class="politica-titulo">3. Finalidade</div>
+      <div class="politica-texto">Os dados são usados exclusivamente para o funcionamento do app. Não são compartilhados com terceiros nem usados para publicidade.</div>
+
+      <div class="politica-titulo">4. Armazenamento</div>
+      <div class="politica-texto">Dados armazenados no Firebase (Google Cloud), com certificações de segurança internacionais. Cada casa tem código único e dados completamente isolados.</div>
+
+      <div class="politica-titulo">5. Seus Direitos (LGPD)</div>
+      <div class="politica-destaque">✔ Acessar seus dados diretamente no app<br>✔ Corrigir ou atualizar a qualquer momento<br>✔ Apagar via botão "Apagar histórico"<br>✔ Solicitar exclusão total via WhatsApp</div>
+
+      <div class="politica-titulo">6. Sua Responsabilidade</div>
+      <div class="politica-texto">Você é responsável pelos dados que insere, incluindo fotos e nomes de terceiros. Ao cadastrar dados de outras pessoas, você declara ter o consentimento delas.</div>
+
+      <div class="politica-titulo">7. Retenção</div>
+      <div class="politica-texto">Dados ficam armazenados enquanto a casa estiver ativa. Casas sem acesso por mais de 12 meses podem ser removidas mediante aviso prévio.</div>
+
+      <div class="politica-titulo">8. Contato</div>
+      <div class="politica-destaque">MRQ Log — Miqueias Ribeiro Queiroz<br>WhatsApp: (34) 99216-0329<br>Uberlândia/MG — Brasil</div>
+
+      <div style="text-align:center;margin-top:20px">
+        <button onclick="document.getElementById('modal-politica').classList.remove('open')" style="background:#0f3460;color:white;border:none;border-radius:10px;padding:12px 32px;font-size:13px;font-weight:700;cursor:pointer">Entendi ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="tutorial-highlight" id="tutorial-highlight" style="display:none"></div>
 <div class="tutorial-overlay" id="tutorial-overlay" style="display:none">
   <div class="tutorial-box">
@@ -1144,6 +1238,17 @@ else {
 </script>
 
 <script>
+// Splash screen
+window.addEventListener('load', () => {
+  const splash = document.getElementById('splash');
+  if (splash) {
+    setTimeout(() => {
+      splash.classList.add('hide');
+      setTimeout(() => splash.style.display = 'none', 500);
+    }, 1800);
+  }
+});
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(()=>{});
