@@ -520,6 +520,35 @@ window.aplicarFotos = function() {
 
 <div class="toast" id="toast"></div>
 
+<!-- MODAL ACEITE DE TERMOS -->
+<div class="modal-politica" id="modal-aceite">
+  <div class="modal-politica-box">
+    <div class="modal-politica-hdr">
+      <h3>🔒 Termos de Uso e Privacidade</h3>
+    </div>
+    <div class="modal-politica-body">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:48px;margin-bottom:8px">📋</div>
+        <div style="font-size:16px;font-weight:800;color:#0f3460;margin-bottom:8px">Antes de continuar</div>
+        <div style="font-size:13px;color:#64748b;line-height:1.6">Para usar o Contas de Casa você precisa concordar com nossa Política de Privacidade.</div>
+      </div>
+
+      <div class="politica-destaque" style="margin-bottom:16px">
+        📌 Coletamos apenas os dados que você inserir (nomes, fotos, valores).<br><br>
+        🔒 Seus dados ficam armazenados com segurança no Firebase/Google.<br><br>
+        🚫 Não compartilhamos seus dados com terceiros.<br><br>
+        ✏️ Você pode apagar seus dados a qualquer momento.
+      </div>
+
+      <button onclick="verPoliticaCompleta()" style="width:100%;background:#f1f5f9;color:#0f3460;border:1px solid #e2e8f0;border-radius:10px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px">📄 Ler Política Completa</button>
+
+      <button onclick="aceitarTermos()" style="width:100%;background:#f97316;color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer">✅ Li e Concordo</button>
+
+      <div style="font-size:10px;color:#94a3b8;text-align:center;margin-top:10px">Ao concordar você aceita nossa Política de Privacidade e Termos de Uso</div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL POLÍTICA DE PRIVACIDADE -->
 <div class="modal-politica" id="modal-politica">
   <div class="modal-politica-box">
@@ -1222,13 +1251,41 @@ function fecharTutorial() {
   if (tabBtn) showTab('inicio', tabBtn);
 }
 
+function mostrarAceiteTermos() {
+  const aceito = localStorage.getItem('termos_aceitos');
+  if (!aceito) {
+    document.getElementById('modal-aceite').classList.add('open');
+  }
+}
+
+function aceitarTermos() {
+  localStorage.setItem('termos_aceitos', 'sim');
+  document.getElementById('modal-aceite').classList.remove('open');
+}
+
+function verPoliticaCompleta() {
+  document.getElementById('modal-aceite').classList.remove('open');
+  document.getElementById('modal-politica').classList.add('open');
+  // Ao fechar a política, volta para o aceite se ainda não aceitou
+  const aceito = localStorage.getItem('termos_aceitos');
+  if (!aceito) {
+    const btnEntendi = document.querySelector('#modal-politica .modal-politica-body button');
+    if (btnEntendi) {
+      btnEntendi.onclick = function() {
+        document.getElementById('modal-politica').classList.remove('open');
+        document.getElementById('modal-aceite').classList.add('open');
+      };
+    }
+  }
+}
+
 function resetarTudo() {
   if(!confirm('Apagar TODO o histórico?')) return;
   dados.historico=[];dados.mesFechado=false;
   save();render();renderHistorico();showToast('Histórico apagado!');
 }
 
-function initApp() { load(); updateHeader(); render(); setTimeout(iniciarTutorial, 800); }
+function initApp() { load(); updateHeader(); render(); setTimeout(mostrarAceiteTermos, 500); setTimeout(iniciarTutorial, 800); }
 
 if (window.fbReady) { initApp(); }
 else {
