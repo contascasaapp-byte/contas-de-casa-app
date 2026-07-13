@@ -724,6 +724,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// === SHA-256 ===
+async function sha256(texto) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(texto);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Verifica senha com suporte a texto puro (legado) e hash (novo)
+// Se encontrar texto puro, migra automaticamente para hash
+async function verificarESalvarSenha(senhaDigitada, senhaArmazenada) {
+  if (!senhaArmazenada) return true; // sem senha = acesso livre
+  const hashDigitado = await sha256(senhaDigitada);
+  if (hashDigitado === senhaArmazenada) return true; // hash bate
+  if (senhaDigitada === senhaArmazenada) return 'migrar'; // texto puro legado — migrar
+  return false;
+}
+
 // === ENTRADA ===
 function mostrarEntrar() {
   document.getElementById('modo-entrar').style.display = 'block';
@@ -771,13 +790,21 @@ async function entrarCasa() {
 async function verificarSenha() {
   const senha = document.getElementById('input-senha-acesso').value.trim();
   if (!senha || !casaIdPendente) return;
+  const btnVerificar = document.querySelector('#modo-senha button');
+  if (btnVerificar) btnVerificar.disabled = true;
   try {
-    const { getFirestore, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js");
+    const { getFirestore, doc, getDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js");
     const db = getFirestore();
     const snap = await getDoc(doc(db, 'casas', casaIdPendente, 'dados', 'principal'));
     let parsed = {};
     try { parsed = JSON.parse(snap.data().dados || '{}'); } catch {}
-    if (parsed.senha === senha) {
+    const resultado = await verificarESalvarSenha(senha, parsed.senha);
+    if (resultado === true || resultado === 'migrar') {
+      // Se senha ainda era texto puro, migra para hash agora
+      if (resultado === 'migrar') {
+        parsed.senha = await sha256(senha);
+        await setDoc(doc(db, 'casas', casaIdPendente, 'dados', 'principal'), { dados: JSON.stringify(parsed) });
+      }
       localStorage.setItem('loginEm_' + casaIdPendente, Date.now().toString());
       document.getElementById('entrada-overlay').style.display = 'none';
       await window.iniciarCasa(casaIdPendente);
@@ -788,6 +815,8 @@ async function verificarSenha() {
     }
   } catch(e) {
     document.getElementById('senha-erro').style.display = 'block';
+  } finally {
+    if (btnVerificar) btnVerificar.disabled = false;
   }
 }
 
@@ -806,7 +835,7 @@ async function criarCasa() {
   await window.iniciarCasa(id);
   dados = JSON.parse(JSON.stringify(DEFAULTS));
   dados.nomeCasa = nome;
-  dados.senha = senha || '12345'; // senha padrão
+  dados.senha = await sha256(senha || '12345'); // salva já como hash
   save();
   document.getElementById('modo-criar').style.display = 'none';
   document.getElementById('modo-sucesso').style.display = 'block';
@@ -1173,14 +1202,18 @@ function compartilharLink() {
   else{navigator.clipboard.writeText(link).then(()=>showToast('Link copiado!')).catch(()=>prompt('Copie o link:',link));}
 }
 
-function alterarSenha() {
+async function alterarSenha() {
   const atual=document.getElementById('ger-senha-atual').value.trim();
   const nova=document.getElementById('ger-senha-nova').value.trim();
   const confirma=document.getElementById('ger-senha-confirma').value.trim();
   const senhaAtual=dados.senha||'';
-  if(senhaAtual&&atual!==senhaAtual){showToast('Senha atual incorreta');return;}
+  // Verifica senha atual (suporta hash e legado)
+  if (senhaAtual) {
+    const resultado = await verificarESalvarSenha(atual, senhaAtual);
+    if (!resultado) { showToast('Senha atual incorreta'); return; }
+  }
   if(nova&&nova!==confirma){showToast('As senhas não coincidem');return;}
-  if(nova){dados.senha=nova;showToast('Senha definida!');}
+  if(nova){dados.senha = await sha256(nova); showToast('Senha definida!');}
   else{delete dados.senha;showToast('Senha removida!');}
   dados.senhaMudouEm = Date.now();
   document.getElementById('ger-senha-atual').value='';
@@ -1383,19 +1416,21 @@ function fecharTutorial() {
   if (tabBtn) showTab('inicio', tabBtn);
 }
 
-function verificarSenhaPadrao() {
+async function verificarSenhaPadrao() {
   // Não pede troca se for admin
   const isAdmin = new URLSearchParams(window.location.search).get('admin') === 'true';
   if (isAdmin) return;
-  // Se a senha ainda é a padrão 12345, força troca
-  if (dados && dados.senha === '12345') {
+  // Verifica se senha ainda é a padrão 12345 (texto puro ou hash)
+  if (!dados || !dados.senha) return;
+  const hash12345 = await sha256('12345');
+  if (dados.senha === '12345' || dados.senha === hash12345) {
     setTimeout(() => {
       document.getElementById('modal-trocar-senha').classList.add('open');
     }, 600);
   }
 }
 
-function salvarSenhaObrigatoria() {
+async function salvarSenhaObrigatoria() {
   const nova = document.getElementById('input-nova-senha-obrig').value.trim();
   const confirma = document.getElementById('input-confirma-senha-obrig').value.trim();
   const erro = document.getElementById('erro-senha-obrig');
@@ -1406,7 +1441,7 @@ function salvarSenhaObrigatoria() {
   if (nova !== confirma) { erro.textContent = 'As senhas não coincidem!'; erro.style.display = 'block'; return; }
 
   erro.style.display = 'none';
-  dados.senha = nova;
+  dados.senha = await sha256(nova);
   dados.senhaMudouEm = Date.now();
   save();
   document.getElementById('modal-trocar-senha').classList.remove('open');
