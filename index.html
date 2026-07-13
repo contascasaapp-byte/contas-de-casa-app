@@ -520,6 +520,29 @@ window.aplicarFotos = function() {
 
 <div class="toast" id="toast"></div>
 
+<!-- MODAL TROCA DE SENHA OBRIGATÓRIA -->
+<div class="modal-politica" id="modal-trocar-senha">
+  <div class="modal-politica-box">
+    <div class="modal-politica-hdr">
+      <h3>🔑 Crie sua senha</h3>
+    </div>
+    <div class="modal-politica-body">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:48px;margin-bottom:8px">🔒</div>
+        <div style="font-size:16px;font-weight:800;color:#0f3460;margin-bottom:8px">Defina sua senha</div>
+        <div style="font-size:13px;color:#64748b;line-height:1.6">Por segurança, crie uma senha personalizada antes de continuar. Só você saberá sua senha!</div>
+      </div>
+      <label class="mlabel">Nova senha</label>
+      <input class="minput" type="password" id="input-nova-senha-obrig" placeholder="Digite sua nova senha"/>
+      <label class="mlabel">Confirmar senha</label>
+      <input class="minput" type="password" id="input-confirma-senha-obrig" placeholder="Repita a senha"/>
+      <div id="erro-senha-obrig" style="font-size:12px;color:#ef4444;margin-bottom:8px;display:none">As senhas não coincidem!</div>
+      <button onclick="salvarSenhaObrigatoria()" style="width:100%;background:#f97316;color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer">✅ Salvar e Entrar</button>
+      <div style="font-size:10px;color:#94a3b8;text-align:center;margin-top:10px">Guarde bem sua senha — ela protege o acesso à sua casa!</div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL ACEITE DE TERMOS -->
 <div class="modal-politica" id="modal-aceite">
   <div class="modal-politica-box">
@@ -1251,6 +1274,33 @@ function fecharTutorial() {
   if (tabBtn) showTab('inicio', tabBtn);
 }
 
+function verificarSenhaPadrao() {
+  // Se a senha ainda é a padrão 12345, força troca
+  if (dados && dados.senha === '12345') {
+    setTimeout(() => {
+      document.getElementById('modal-trocar-senha').classList.add('open');
+    }, 600);
+  }
+}
+
+function salvarSenhaObrigatoria() {
+  const nova = document.getElementById('input-nova-senha-obrig').value.trim();
+  const confirma = document.getElementById('input-confirma-senha-obrig').value.trim();
+  const erro = document.getElementById('erro-senha-obrig');
+
+  if (!nova) { erro.textContent = 'Digite uma senha!'; erro.style.display = 'block'; return; }
+  if (nova.length < 4) { erro.textContent = 'Senha muito curta — mínimo 4 caracteres!'; erro.style.display = 'block'; return; }
+  if (nova === '12345') { erro.textContent = 'Escolha uma senha diferente da padrão!'; erro.style.display = 'block'; return; }
+  if (nova !== confirma) { erro.textContent = 'As senhas não coincidem!'; erro.style.display = 'block'; return; }
+
+  erro.style.display = 'none';
+  dados.senha = nova;
+  dados.senhaMudouEm = Date.now();
+  save();
+  document.getElementById('modal-trocar-senha').classList.remove('open');
+  showToast('🔒 Senha criada com sucesso!');
+}
+
 function mostrarAceiteTermos() {
   const aceito = localStorage.getItem('termos_aceitos');
   if (!aceito) {
@@ -1285,7 +1335,7 @@ function resetarTudo() {
   save();render();renderHistorico();showToast('Histórico apagado!');
 }
 
-function initApp() { load(); updateHeader(); render(); setTimeout(mostrarAceiteTermos, 500); setTimeout(iniciarTutorial, 800); }
+function initApp() { load(); updateHeader(); render(); setTimeout(mostrarAceiteTermos, 500); setTimeout(verificarSenhaPadrao, 1000); setTimeout(iniciarTutorial, 1500); }
 
 if (window.fbReady) { initApp(); }
 else {
