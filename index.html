@@ -646,6 +646,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (new URLSearchParams(window.location.search).get('admin') === 'true') {
     const btn = document.getElementById('btn-criar-casa');
     if (btn) btn.style.display = 'block';
+    // Admin só cria casas — vai direto para o modo criar
+    setTimeout(() => mostrarCriar(), 100);
   }
 });
 
