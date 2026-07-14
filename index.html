@@ -1103,8 +1103,17 @@ function renderHistorico() {
           const fotoHtml = fotoSrc?`<img src="${fotoSrc}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px"/>`:'';
           return `<span class="hist-pessoa-chip ${p.pago?'chip-ok':'chip-nao'}">${fotoHtml}${p.nome} ${p.pago?'✅':'⏳'}</span>`;
         }).join('')}</div>
+        <button onclick="apagarMes('${h.mes}')" style="width:100%;margin-top:10px;background:#ef444422;color:#ef4444;border:1px solid #ef444444;border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer">🗑 Apagar este mês</button>
       </div>
     </div>`).join('');
+}
+
+function apagarMes(mes) {
+  if (!confirm('Apagar o histórico de ' + mes + '? Esta ação não pode ser desfeita.')) return;
+  dados.historico = dados.historico.filter(h => h.mes !== mes);
+  save();
+  renderHistorico();
+  showToast('Histórico de ' + mes + ' apagado!');
 }
 
 function renderResponsaveis(sel) {
