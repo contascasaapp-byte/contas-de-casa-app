@@ -1419,10 +1419,15 @@ function proximoPasso() {
 }
 
 function reverTutorial() {
-  if (casaId) localStorage.removeItem('tutorial_' + casaId);
+  const casaIdLocal = localStorage.getItem('contas_casa_id');
+  if (casaIdLocal) localStorage.removeItem('tutorial_' + casaIdLocal);
   passoAtual = 0;
-  tutorialAtivo = false;
-  setTimeout(iniciarTutorial, 300);
+  tutorialAtivo = true;
+  tutorialMoradores = dados.pessoas.length;
+  tutorialContas = dados.contas.length;
+  tutorialPagamentos = dados.pessoas.filter(p=>p.pago).length;
+  mostrarPasso(0);
+  document.getElementById('tutorial-overlay').style.display = 'flex';
 }
 
 function fecharTutorial() {
