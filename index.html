@@ -508,6 +508,13 @@ window.aplicarFotos = function() {
         <button onclick="alterarSenha()" style="width:100%;background:#0f3460;color:white;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">Salvar senha</button>
       </div>
     </div>
+    <div class="section">
+      <div class="section-title" style="margin-bottom:10px">📖 Tutorial</div>
+      <div style="background:white;border-radius:12px;padding:16px;border:1px solid #e2e8f0;box-shadow:0 1px 4px #0001">
+        <div style="font-size:12px;color:#64748b;margin-bottom:12px">Quer rever como usar o app? Clique abaixo para iniciar o tutorial novamente.</div>
+        <button onclick="reverTutorial()" style="width:100%;background:#f97316;color:white;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">🎓 Rever Tutorial</button>
+      </div>
+    </div>
   </div>
 
   <div id="tab-historico" class="tab-panel">
@@ -1327,7 +1334,7 @@ const PASSOS_TUTORIAL = [
   {
     icon: '🚀',
     titulo: 'Passo 6 — Novo Mês',
-    texto: 'Após fechar, clique em 🚀 Iniciar Novo Mês para zerar os pagamentos e começar o próximo mês. As contas e moradores permanecem cadastrados!',
+    texto: 'Após fechar, clique em 🚀 Iniciar Novo Mês para começar o próximo mês. Os pagamentos são zerados, mas as contas e moradores continuam cadastrados — só atualize os valores que mudaram, como Energia e Água!',
     tab: 'inicio', acao: null, btn: 'Entendi!'
   },
   {
@@ -1409,6 +1416,13 @@ function proximoPasso() {
   } else {
     mostrarPasso(passoAtual);
   }
+}
+
+function reverTutorial() {
+  if (casaId) localStorage.removeItem('tutorial_' + casaId);
+  passoAtual = 0;
+  tutorialAtivo = false;
+  setTimeout(iniciarTutorial, 300);
 }
 
 function fecharTutorial() {
