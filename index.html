@@ -1365,6 +1365,8 @@ function iniciarTutorial() {
   document.getElementById('tutorial-overlay').style.display = 'flex';
 }
 
+let modoRever = false;
+
 function mostrarPasso(i) {
   const passo = PASSOS_TUTORIAL[i];
   document.getElementById('tutorial-icon').textContent = passo.icon;
@@ -1373,15 +1375,17 @@ function mostrarPasso(i) {
   document.getElementById('tutorial-passo').textContent = 'Passo ' + (i+1) + ' de ' + PASSOS_TUTORIAL.length;
   const btn = document.getElementById('tutorial-btn');
   btn.textContent = passo.btn;
-  btn.disabled = passo.bloqueado || false;
-  btn.style.opacity = passo.bloqueado ? '0.4' : '1';
-  btn.style.cursor = passo.bloqueado ? 'not-allowed' : 'pointer';
+  // No modo rever nunca bloqueia o botão
+  const bloqueado = modoRever ? false : (passo.bloqueado || false);
+  btn.disabled = bloqueado;
+  btn.style.opacity = bloqueado ? '0.4' : '1';
+  btn.style.cursor = bloqueado ? 'not-allowed' : 'pointer';
   if (passo.tab) {
     const tabBtn = document.querySelector('.tab-btn[onclick*="' + passo.tab + '"]');
     if (tabBtn) showTab(passo.tab, tabBtn);
   }
-  // Inicia monitoramento da ação
-  if (passo.acao) monitorarAcao(passo.acao);
+  // Só monitora ação se não for modo rever
+  if (passo.acao && !modoRever) monitorarAcao(passo.acao);
 }
 
 function monitorarAcao(acao) {
@@ -1423,6 +1427,7 @@ function reverTutorial() {
   if (casaIdLocal) localStorage.removeItem('tutorial_' + casaIdLocal);
   passoAtual = 0;
   tutorialAtivo = true;
+  modoRever = true;
   tutorialMoradores = dados.pessoas.length;
   tutorialContas = dados.contas.length;
   tutorialPagamentos = dados.pessoas.filter(p=>p.pago).length;
@@ -1432,6 +1437,7 @@ function reverTutorial() {
 
 function fecharTutorial() {
   tutorialAtivo = false;
+  modoRever = false;
   document.getElementById('tutorial-overlay').style.display = 'none';
   const casaId = localStorage.getItem('contas_casa_id');
   if (casaId) localStorage.setItem('tutorial_' + casaId, 'visto');
