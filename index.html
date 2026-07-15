@@ -516,6 +516,45 @@ window.aplicarFotos = function() {
         <button onclick="reverTutorial()" style="width:100%;background:#f97316;color:white;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">🎓 Rever Tutorial</button>
       </div>
     </div>
+    <div class="section">
+      <div class="section-title" style="margin-bottom:10px">📲 Instalar o App</div>
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">💡</span>
+        <span style="font-size:12px;color:#c2410c;line-height:1.4">Instale o app no celular para acessar mais rápido, sem precisar abrir o navegador!</span>
+      </div>
+      <!-- Android -->
+      <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px #0001;border:1px solid #e2e8f0;margin-bottom:10px">
+        <div onclick="toggleInstalar('android')" style="background:linear-gradient(90deg,#0f3460,#1e3a5f);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#fbbf24">🤖 Android</div>
+            <div style="font-size:11px;color:#93c5fd;margin-top:2px">Chrome</div>
+          </div>
+          <div id="arrow-android" style="color:#93c5fd;font-size:14px;transition:transform 0.3s">▼</div>
+        </div>
+        <div id="instalar-android" style="display:none;padding:14px 16px">
+          <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px"><div style="background:#f97316;color:white;font-size:11px;font-weight:800;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div><div style="font-size:13px;color:#1e293b">Abra o app no <strong style="color:#0f3460">Google Chrome</strong></div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px"><div style="background:#f97316;color:white;font-size:11px;font-weight:800;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div><div style="font-size:13px;color:#1e293b">Toque nos <strong style="color:#0f3460">3 pontinhos ⋮</strong> no canto superior direito</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px"><div style="background:#f97316;color:white;font-size:11px;font-weight:800;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div><div style="font-size:13px;color:#1e293b">Você verá duas opções — escolha <strong style="color:#0f3460">"Instalar aplicativo"</strong><div style="font-size:11px;color:#f97316;font-weight:600;margin-top:3px">⭐ Recomendado — instala como app de verdade!</div><div style="font-size:11px;color:#94a3b8;margin-top:2px">A opção "Adicionar à tela inicial" cria apenas um atalho</div></div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><div style="background:#f97316;color:white;font-size:11px;font-weight:800;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div><div style="font-size:13px;color:#1e293b">Confirme tocando em <strong style="color:#0f3460">"Instalar"</strong><div style="font-size:11px;color:#94a3b8;margin-top:2px">O ícone do app vai aparecer na sua tela inicial! 🎉</div></div></div>
+        </div>
+      </div>
+      <!-- iPhone -->
+      <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px #0001;border:1px solid #e2e8f0">
+        <div onclick="toggleInstalar('iphone')" style="background:linear-gradient(90deg,#0f3460,#1e3a5f);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#fbbf24">🍎 iPhone</div>
+            <div style="font-size:11px;color:#93c5fd;margin-top:2px">Safari ou Chrome</div>
+          </div>
+          <div id="arrow-iphone" style="color:#93c5fd;font-size:14px;transition:transform 0.3s">▼</div>
+        </div>
+        <div id="instalar-iphone" style="display:none;padding:14px 16px">
+          <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px"><div style="background:#f97316;color:white;font-size:11px;font-weight:800;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div><div style="font-size:13px;color:#1e293b">Abra o app no <strong style="color:#0f3460">Safari</strong> ou <strong style="color:#0f3460">Chrome</strong></div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px"><div style="background:#f97316;color:white;font-size:11px;font-weight:800;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div><div style="font-size:13px;color:#1e293b">Toque no ícone de <strong style="color:#0f3460">compartilhar</strong> na barra inferior<div style="font-size:11px;color:#94a3b8;margin-top:2px">É o quadrado com uma seta pra cima ⬆</div></div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px"><div style="background:#f97316;color:white;font-size:11px;font-weight:800;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div><div style="font-size:13px;color:#1e293b">Role a lista e toque em <strong style="color:#0f3460">"Adicionar à Tela de Início"</strong><div style="font-size:11px;color:#94a3b8;margin-top:2px">No iPhone essa é a única opção disponível</div></div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><div style="background:#f97316;color:white;font-size:11px;font-weight:800;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div><div style="font-size:13px;color:#1e293b">Toque em <strong style="color:#0f3460">"Adicionar"</strong> no canto superior direito<div style="font-size:11px;color:#94a3b8;margin-top:2px">O ícone do app vai aparecer na sua tela inicial! 🎉</div></div></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="tab-historico" class="tab-panel">
@@ -701,6 +740,23 @@ window.aplicarFotos = function() {
     </div>
   </div>
 </div>
+<!-- BANNER INSTALAR APP -->
+<div id="banner-instalar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:77777;padding:10px 16px;background:linear-gradient(90deg,#0f3460,#1e3a5f);border-bottom:2px solid #f97316;box-shadow:0 2px 12px #0003">
+  <div style="max-width:600px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px;flex:1">
+      <span style="font-size:20px">📲</span>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:white">Instale o app no seu celular!</div>
+        <div style="font-size:11px;color:#93c5fd">Acesse mais rápido, sem abrir o navegador.</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <button onclick="verComoInstalar()" style="background:#f97316;color:white;border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer">Ver como</button>
+      <button onclick="fecharBannerInstalar()" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;padding:4px">✕</button>
+    </div>
+  </div>
+</div>
+
 <div class="tutorial-highlight" id="tutorial-highlight" style="display:none"></div>
 <div class="tutorial-overlay" id="tutorial-overlay" style="display:none">
   <div class="tutorial-box">
@@ -1618,13 +1674,44 @@ function aplicarTema() {
   }
 }
 
+function toggleInstalar(os) {
+  const body = document.getElementById('instalar-' + os);
+  const arrow = document.getElementById('arrow-' + os);
+  const aberto = body.style.display === 'block';
+  body.style.display = aberto ? 'none' : 'block';
+  arrow.style.transform = aberto ? '' : 'rotate(180deg)';
+}
+
+function mostrarBannerInstalar() {
+  const jaViu = localStorage.getItem('banner_instalar_fechado');
+  if (jaViu) return;
+  // Não mostrar se o tutorial estiver ativo
+  if (tutorialAtivo) return;
+  document.getElementById('banner-instalar').style.display = 'block';
+}
+
+function fecharBannerInstalar() {
+  localStorage.setItem('banner_instalar_fechado', 'sim');
+  document.getElementById('banner-instalar').style.display = 'none';
+}
+
+function verComoInstalar() {
+  fecharBannerInstalar();
+  const tabBtn = document.querySelector('.tab-btn[onclick*="gerenciar"]');
+  if (tabBtn) showTab('gerenciar', tabBtn);
+  setTimeout(() => {
+    const secao = document.getElementById('instalar-android');
+    if (secao) secao.closest('.section') ? secao.closest('.section').scrollIntoView({behavior:'smooth'}) : secao.scrollIntoView({behavior:'smooth'});
+  }, 300);
+}
+
 function resetarTudo() {
   if(!confirm('Apagar TODO o histórico?')) return;
   dados.historico=[];dados.mesFechado=false;
   save();render();renderHistorico();showToast('Histórico apagado!');
 }
 
-function initApp() { load(); updateHeader(); render(); aplicarTema(); setTimeout(mostrarAceiteTermos, 500); setTimeout(verificarSenhaPadrao, 1000); setTimeout(iniciarTutorial, 1500); }
+function initApp() { load(); updateHeader(); render(); aplicarTema(); setTimeout(mostrarAceiteTermos, 500); setTimeout(verificarSenhaPadrao, 1000); setTimeout(iniciarTutorial, 1500); setTimeout(mostrarBannerInstalar, 4000); }
 
 if (window.fbReady) { initApp(); }
 else {
