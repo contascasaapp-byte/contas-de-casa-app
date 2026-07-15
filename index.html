@@ -360,6 +360,7 @@ window.aplicarFotos = function() {
   <div class="splash-logo">🏠</div>
   <div class="splash-titulo">Contas de Casa</div>
   <div class="splash-sub">Divisão de contas fácil</div>
+  <div style="font-size:11px;color:#93c5fd;margin-bottom:16px;font-weight:600;letter-spacing:1px;">v2.0.0</div>
   <div class="splash-loading">
     <div class="splash-dot"></div>
     <div class="splash-dot"></div>
@@ -527,6 +528,7 @@ window.aplicarFotos = function() {
   <!-- RODAPÉ -->
   <div class="footer">
     <div class="footer-texto">Desenvolvido por <strong>MRQ Log</strong> · <a class="footer-link" href="https://wa.me/5534992160329" target="_blank">📱 Fale conosco</a> · <span class="footer-link" style="cursor:pointer" onclick="document.getElementById('modal-politica').classList.add('open')">Privacidade</span></div>
+    <div class="footer-texto" style="margin-top:4px;">Contas de Casa v2.0.0</div>
   </div>
 
 </div>
@@ -1429,7 +1431,13 @@ const PASSOS_TUTORIAL = [
   {
     icon: '📜',
     titulo: 'Passo 7 — Histórico',
-    texto: 'Na aba 📜 Histórico você vê todos os meses anteriores. Clique em qualquer mês para ver as contas, valores e quem pagou!',
+    texto: 'Na aba 📜 Histórico você vê todos os meses anteriores. Clique em qualquer mês para expandir e ver as contas, valores e quem pagou!',
+    tab: 'historico', acao: null, btn: 'Próximo →'
+  },
+  {
+    icon: '📊',
+    titulo: 'Passo 8 — Resumo Anual',
+    texto: 'Com 2 ou mais meses fechados aparece o Resumo Anual: total gasto no ano, quanto cada morador pagou e quantos meses cada um ficou em dia. O gráfico de barras mostra a evolução mês a mês — ótimo para acompanhar os gastos da casa!',
     tab: 'historico', acao: null, btn: 'Começar a usar! 🚀'
   }
 ];
