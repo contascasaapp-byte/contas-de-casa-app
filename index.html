@@ -495,6 +495,18 @@ window.aplicarFotos = function() {
       <div id="ger-pessoas"></div>
     </div>
     <div class="section">
+      <div class="section-header"><div class="section-title">🏠 Nome da Casa</div></div>
+      <div class="ger-card">
+        <div style="display:flex;align-items:center;gap:10px;flex:1">
+          <div style="font-size:20px">🏠</div>
+          <div><span class="ger-nome" id="ger-nome-casa">—</span><div style="font-size:10px;color:#94a3b8;margin-top:2px">Nome exibido no app</div></div>
+        </div>
+        <div class="ger-actions">
+          <button class="btn-ger-edit" onclick="abrirModalNomeCasa()">✏️</button>
+        </div>
+      </div>
+    </div>
+    <div class="section">
       <button onclick="compartilharLink()" style="width:100%;background:linear-gradient(90deg,#0f3460,#1e3a5f);color:white;border:2px solid #93c5fd;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">🔗 Compartilhar link desta casa</button>
     </div>
     <div class="section">
@@ -740,6 +752,24 @@ window.aplicarFotos = function() {
     </div>
   </div>
 </div>
+<!-- MODAL EDITAR NOME DA CASA -->
+<div class="modal-overlay" id="modal-nome-casa">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3>🏠 Nome da Casa</h3>
+      <button class="modal-x" onclick="fecharModal('modal-nome-casa')">✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="mlabel">Nome da casa</label>
+      <input class="minput" type="text" id="input-nome-casa" placeholder="Ex: Família RQ" maxlength="40"/>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" onclick="fecharModal('modal-nome-casa')">Cancelar</button>
+      <button class="btn-save" onclick="salvarNomeCasa()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- BANNER INSTALAR APP -->
 <div id="banner-instalar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:77777;padding:10px 16px;background:linear-gradient(90deg,#0f3460,#1e3a5f);border-bottom:2px solid #f97316;box-shadow:0 2px 12px #0003">
   <div style="max-width:600px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px">
@@ -975,6 +1005,7 @@ window.syncFromCloud = function(nd) {
   const fotos = window.fbFotos || {};
   dados.pessoas = dados.pessoas.map(p => { if (fotos[p.id]) p.foto = fotos[p.id]; return p; });
   render(); renderGer();
+  const el=document.getElementById('ger-nome-casa'); if(el) el.textContent=dados.nomeCasa||'Contas de Casa';
 };
 
 function save() { if (window.saveToFirebase) window.saveToFirebase(dados); }
@@ -992,7 +1023,7 @@ function showTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
-  if(name==='gerenciar') renderGer();
+  if(name==='gerenciar') { renderGer(); const el=document.getElementById('ger-nome-casa'); if(el) el.textContent=dados.nomeCasa||'Contas de Casa'; }
   if(name==='historico') renderHistorico();
 }
 
@@ -1235,10 +1266,33 @@ function renderHistorico() {
       </div>
       <div class="hist-body">
         ${(h.contas||[]).map(c=>`<div class="hist-row"><span>${c.icon||'💡'} ${c.nome}</span><span>${fmt(c.valor)}</span></div>`).join('')}
-        <div class="hist-row" style="font-weight:700"><span>Cada um pagou</span><span>${fmt(h.cada)}</span></div>
+        <div style="margin:10px 0 6px;padding-top:8px;border-top:2px solid #f1f5f9;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">👥 Divisão</div>
+        ${(()=>{
+          const grupos = {};
+          (h.pessoas||[]).forEach(p => {
+            const val = p.valor !== undefined ? p.valor : h.cada;
+            const key = val.toFixed(2);
+            if (!grupos[key]) grupos[key] = { valor: val, nomes: [] };
+            grupos[key].nomes.push(p.nome);
+          });
+          const keys = Object.keys(grupos);
+          if (keys.length <= 1) {
+            return `<div class="hist-row" style="font-weight:700"><span>Cada um pagou</span><span>${fmt(h.cada)}</span></div>`;
+          } else {
+            return keys.map(k => {
+              const g = grupos[k];
+              const label = g.nomes.length === (h.pessoas||[]).length ? 'Cada um pagou' : g.nomes.join(', ');
+              return `<div class="hist-row" style="font-weight:700"><span>${label}</span><span>${fmt(g.valor)}</span></div>`;
+            }).join('');
+          }
+        })()}
+        <div style="margin:10px 0 6px;padding-top:8px;border-top:2px solid #f1f5f9;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">✅ Pagamentos</div>
         <div class="hist-pessoas">${(h.pessoas||[]).map(p=>{
-          const fotoSrc = p.foto || (h.fotosHistorico && h.fotosHistorico[p.id]) || null;
-          const fotoHtml = fotoSrc?`<img src="${fotoSrc}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px"/>`:'';
+          const fotoAtual = (dados.pessoas.find(dp=>dp.nome===p.nome)||{}).foto || null;
+          const fotoSrc = fotoAtual || p.foto || (h.fotosHistorico && h.fotosHistorico[p.id]) || null;
+          const fotoHtml = fotoSrc
+            ? `<img src="${fotoSrc}" style="width:22px;height:22px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:5px;border:2px solid ${p.pago?'#22c55e':'#f97316'}"/>`
+            : `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:${p.pago?'#22c55e':'#f97316'};color:white;font-size:10px;font-weight:800;vertical-align:middle;margin-right:5px">${p.nome.charAt(0).toUpperCase()}</span>`;
           return `<span class="hist-pessoa-chip ${p.pago?'chip-ok':'chip-nao'}">${fotoHtml}${p.nome} ${p.pago?'✅':'⏳'}</span>`;
         }).join('')}</div>
         <button onclick="apagarMes('${h.mes}')" style="width:100%;margin-top:10px;background:#ef444422;color:#ef4444;border:1px solid #ef444444;border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer">🗑 Apagar este mês</button>
@@ -1703,6 +1757,23 @@ function verComoInstalar() {
     const secao = document.getElementById('instalar-android');
     if (secao) secao.closest('.section') ? secao.closest('.section').scrollIntoView({behavior:'smooth'}) : secao.scrollIntoView({behavior:'smooth'});
   }, 300);
+}
+
+function abrirModalNomeCasa() {
+  document.getElementById('input-nome-casa').value = dados.nomeCasa || '';
+  abrirModal('modal-nome-casa');
+}
+
+function salvarNomeCasa() {
+  const nome = document.getElementById('input-nome-casa').value.trim();
+  if (!nome) { showToast('Informe um nome!'); return; }
+  dados.nomeCasa = nome;
+  save();
+  updateHeader();
+  const el = document.getElementById('ger-nome-casa');
+  if (el) el.textContent = nome;
+  fecharModal('modal-nome-casa');
+  showToast('✅ Nome atualizado!');
 }
 
 function resetarTudo() {
