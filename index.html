@@ -508,6 +508,7 @@ window.aplicarFotos = function() {
     </div>
     <div class="section">
       <button onclick="compartilharLink()" style="width:100%;background:linear-gradient(90deg,#0f3460,#1e3a5f);color:white;border:2px solid #93c5fd;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">🔗 Compartilhar link desta casa</button>
+      <button onclick="trocarCasa()" style="width:100%;background:transparent;color:#ef4444;border:2px solid #ef4444;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer">🚪 Trocar de casa</button>
     </div>
     <div class="section">
       <div class="section-title" style="margin-bottom:10px">🔒 Segurança</div>
@@ -1757,6 +1758,19 @@ function verComoInstalar() {
     const secao = document.getElementById('instalar-android');
     if (secao) secao.closest('.section') ? secao.closest('.section').scrollIntoView({behavior:'smooth'}) : secao.scrollIntoView({behavior:'smooth'});
   }, 300);
+}
+
+function trocarCasa() {
+  if (!confirm('Deseja sair desta casa e entrar em outra?')) return;
+  const casaId = localStorage.getItem('contas_casa_id');
+  // Limpa tudo relacionado a esta casa
+  localStorage.removeItem('contas_casa_id');
+  if (casaId) {
+    localStorage.removeItem('loginEm_' + casaId);
+    localStorage.removeItem('tutorial_' + casaId);
+  }
+  // Redireciona para a tela de entrada
+  window.location.href = window.location.pathname;
 }
 
 function abrirModalNomeCasa() {
