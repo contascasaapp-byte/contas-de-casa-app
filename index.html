@@ -373,6 +373,22 @@ window.aplicarFotos = function() {
 </head>
 <body>
 
+<!-- POPUP NOVO MÊS -->
+<div class="popup-parabens-overlay" id="popup-novo-mes">
+  <div class="popup-parabens">
+    <div class="popup-parabens-topo" style="background: linear-gradient(135deg, #0f3460, #1e3a5f);">
+      <span class="popup-parabens-emoji">🚀</span>
+      <div class="popup-parabens-titulo">Novo mês iniciado!</div>
+      <div class="popup-parabens-sub">Pagamentos zerados com sucesso ✅</div>
+    </div>
+    <div class="popup-parabens-corpo">
+      <p class="popup-parabens-texto">Lembre-se de ir em <strong>✏️ Gerenciar</strong> e atualizar os valores das contas que mudaram, como Energia e Água!</p>
+      <button class="popup-parabens-btn-fechar" onclick="irParaGerenciar()">✏️ Ir para Gerenciar</button>
+      <button class="popup-parabens-btn-agora-nao" onclick="document.getElementById('popup-novo-mes').classList.remove('open')">Já sei, obrigado!</button>
+    </div>
+  </div>
+</div>
+
 <!-- POPUP 100% PAGO -->
 <div class="popup-parabens-overlay" id="popup-parabens">
   <div class="popup-parabens">
@@ -1336,7 +1352,9 @@ function renderHistorico() {
 }
 
 function apagarMes(mes) {
-  if (!confirm('Apagar o histórico de ' + mes + '? Esta ação não pode ser desfeita.')) return;
+  const digitado = prompt('⚠️ Você está prestes a apagar o histórico de ' + mes + '.\n\nEsta ação NÃO pode ser desfeita!\n\nDigite CONFIRMAR para continuar:');
+  if (digitado === null) return;
+  if (digitado.trim().toUpperCase() !== 'CONFIRMAR') { showToast('❌ Ação cancelada — texto incorreto!'); return; }
   dados.historico = dados.historico.filter(h => h.mes !== mes);
   save();
   renderHistorico();
@@ -1392,11 +1410,13 @@ function salvarConta() {
 function toggleConta(id) {
   if(dados.mesFechado) return;
   const c=dados.contas.find(c=>c.id===id);
-  if(c){c.pago=!c.pago;save();render();showToast(c.pago?c.nome+' paga!':c.nome+' desmarcada');}
+  if(c){c.pago=!c.pago;save();render();showToast(c.pago?c.nome+' paga!':c.nome+' desmarcada');if(c.pago)verificarTodosPagos();}
 }
 function deletarConta(id) {
   const c=dados.contas.find(c=>c.id===id);
-  if(!confirm('Remover "'+c.nome+'"?')) return;
+  const digitado = prompt('⚠️ Remover a conta "' + c.nome + '"?\n\nDigite CONFIRMAR para continuar:');
+  if (digitado === null) return;
+  if (digitado.trim().toUpperCase() !== 'CONFIRMAR') { showToast('❌ Ação cancelada — texto incorreto!'); return; }
   dados.contas=dados.contas.filter(c=>c.id!==id);
   save();render();renderGer();showToast('Conta removida');
 }
@@ -1438,7 +1458,9 @@ function togglePessoa(id) {
 }
 function deletarPessoa(id) {
   const p=dados.pessoas.find(p=>p.id===id);
-  if(!confirm('Remover "'+p.nome+'"?')) return;
+  const digitado = prompt('⚠️ Remover o morador "' + p.nome + '"?\n\nDigite CONFIRMAR para continuar:');
+  if (digitado === null) return;
+  if (digitado.trim().toUpperCase() !== 'CONFIRMAR') { showToast('❌ Ação cancelada — texto incorreto!'); return; }
   dados.pessoas=dados.pessoas.filter(p=>p.id!==id);
   save();render();renderGer();showToast(p.nome+' removido');
 }
@@ -1478,6 +1500,8 @@ function fecharMes() {
   const tmp=MESES[mi]+'/'+ano;
   if(dados.historico.some(h=>h.mes===tmp)){mi++;if(mi>11){mi=0;ano++;}}
   const mesNome=MESES[mi]+'/'+ano;
+  // Impede duplicata no histórico
+  if(dados.historico.some(h=>h.mes===mesNome)){showToast('⚠️ Este mês já foi fechado e está salvo no histórico!');return;}
   if(!confirm('Fechar o mês de '+mesNome+'?')) return;
   const excl=new Set();
   dados.contas.forEach(c=>{if(c.responsaveis&&c.responsaveis.length===1)excl.add(c.responsaveis[0]);});
@@ -1504,22 +1528,30 @@ function fecharMes() {
 }
 
 function iniciarNovoMes() {
-  if(!confirm('Iniciar novo mês? Os pagamentos serão zerados.')) return;
+  if(!confirm('Iniciar novo mês? As marcações de pago serão resetadas, mas os valores das contas são mantidos.')) return;
   dados.contas=dados.contas.map(c=>({...c,pago:false}));
   dados.pessoas=dados.pessoas.map(p=>({...p,pago:false}));
   dados.mesFechado=false;
-  save();render();renderGer();showToast('Novo mês iniciado!');
+  save();render();renderGer();
+  document.getElementById('popup-novo-mes').classList.add('open');
 }
 
 function verificarTodosPagos() {
   if (dados.mesFechado) return;
   if (!dados.pessoas.length) return;
-  const todosPagos = dados.pessoas.every(p => p.pago);
-  if (todosPagos) {
+  const pessoasPagas = dados.pessoas.every(p => p.pago);
+  const contasPagas = dados.contas.every(c => c.pago);
+  if (pessoasPagas && contasPagas) {
     setTimeout(() => {
       document.getElementById('popup-parabens').classList.add('open');
     }, 600);
   }
+}
+
+function irParaGerenciar() {
+  document.getElementById('popup-novo-mes').classList.remove('open');
+  const tabBtn = document.querySelector('.tab-btn[onclick*="gerenciar"]');
+  if (tabBtn) showTab('gerenciar', tabBtn);
 }
 
 function fecharPopupParabens() {
@@ -1574,49 +1606,49 @@ const PASSOS_TUTORIAL = [
   },
   {
     icon: '🔒',
-    titulo: 'Passo 3 — Senha de Acesso',
+    titulo: 'Passo 4 — Senha de Acesso',
     texto: 'Em Segurança você pode alterar sua senha de acesso a qualquer momento. Mantenha sua senha em local seguro!',
     tab: 'gerenciar', acao: null, btn: 'Entendi!'
   },
   {
     icon: '📊',
-    titulo: 'Passo 4 — Tela Inicial',
+    titulo: 'Passo 5 — Tela Inicial',
     texto: 'Na aba 🏠 Início você vê o TOTAL DO MÊS (soma de todas as contas) e CADA UM PAGA (divisão igualitária das contas compartilhadas). Quem tem conta individual paga o valor dela separado.',
     tab: 'inicio', acao: null, btn: 'Entendi!'
   },
   {
     icon: '✅',
-    titulo: 'Passo 4 — Marcar Pagamentos',
+    titulo: 'Passo 6 — Marcar Pagamentos',
     texto: 'Clique no card do morador para marcar que ele pagou a parte dele. Ou clique no botão circular da conta para marcá-la como paga. Tudo fica verde quando pago!',
     tab: 'inicio', acao: 'pagamento', btn: 'Próximo →', bloqueado: true
   },
   {
     icon: '⚠️',
-    titulo: 'Passo 5 — Pendentes',
+    titulo: 'Passo 7 — Pendentes',
     texto: 'O aviso laranja mostra quem ainda não pagou e quanto deve. Ótimo para saber quem cobrar no final do mês!',
     tab: 'inicio', acao: null, btn: 'Entendi!'
   },
   {
     icon: '🗓️',
-    titulo: 'Passo 6 — Fechar o Mês',
-    texto: 'Ao final do mês clique em 🔒 Fechar Mês para salvar o histórico com todos os dados do mês.',
+    titulo: 'Passo 8 — Fechar o Mês',
+    texto: 'Quando todos os moradores e contas estiverem marcados como pagos, o app vai sugerir fechar o mês automaticamente com um popup! Ou clique em 🔒 Fechar Mês quando quiser. O histórico é salvo com todos os dados.',
     tab: 'inicio', acao: null, btn: 'Entendi!'
   },
   {
     icon: '🚀',
-    titulo: 'Passo 6 — Novo Mês',
-    texto: 'Após fechar, clique em 🚀 Iniciar Novo Mês para começar o próximo mês. Os pagamentos são zerados, mas as contas e moradores continuam cadastrados — só atualize os valores que mudaram, como Energia e Água!',
+    titulo: 'Passo 9 — Novo Mês',
+    texto: 'Após fechar, clique em 🚀 Iniciar Novo Mês — ou o app inicia automaticamente no dia 1º do mês seguinte! As marcações de pago são resetadas, mas os valores das contas são mantidos — só atualize o que mudou!',
     tab: 'inicio', acao: null, btn: 'Entendi!'
   },
   {
     icon: '📜',
-    titulo: 'Passo 7 — Histórico',
+    titulo: 'Passo 10 — Histórico',
     texto: 'Na aba 📜 Histórico você vê todos os meses anteriores. Clique em qualquer mês para expandir e ver as contas, valores e quem pagou!',
     tab: 'historico', acao: null, btn: 'Próximo →'
   },
   {
     icon: '📊',
-    titulo: 'Passo 8 — Resumo Anual',
+    titulo: 'Passo 11 — Resumo Anual',
     texto: 'Com 2 ou mais meses fechados aparece o Resumo Anual: total gasto no ano, quanto cada morador pagou e quantos meses cada um ficou em dia. O gráfico de barras mostra a evolução mês a mês — ótimo para acompanhar os gastos da casa!',
     tab: 'historico', acao: null, btn: 'Começar a usar! 🚀'
   }
@@ -1649,7 +1681,7 @@ function mostrarPasso(i) {
   document.getElementById('tutorial-icon').textContent = passo.icon;
   document.getElementById('tutorial-titulo').textContent = passo.titulo;
   document.getElementById('tutorial-texto').textContent = passo.texto;
-  document.getElementById('tutorial-passo').textContent = 'Passo ' + (i+1) + ' de ' + PASSOS_TUTORIAL.length;
+  document.getElementById('tutorial-passo').textContent = i === 0 ? '' : 'Passo ' + i + ' de ' + (PASSOS_TUTORIAL.length - 1);
   const btn = document.getElementById('tutorial-btn');
   btn.textContent = passo.btn;
   // No modo rever nunca bloqueia o botão
@@ -1860,7 +1892,9 @@ function salvarNomeCasa() {
 }
 
 function resetarTudo() {
-  if(!confirm('Apagar TODO o histórico?')) return;
+  const digitado = prompt('⚠️ Você está prestes a apagar TODO o histórico da casa.\n\nEsta ação NÃO pode ser desfeita!\n\nDigite CONFIRMAR para continuar:');
+  if (digitado === null) return;
+  if (digitado.trim().toUpperCase() !== 'CONFIRMAR') { showToast('❌ Ação cancelada — texto incorreto!'); return; }
   dados.historico=[];dados.mesFechado=false;
   save();render();renderHistorico();showToast('Histórico apagado!');
 }
