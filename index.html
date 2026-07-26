@@ -220,6 +220,24 @@
   .tutorial-btn { flex: 1; background: #f97316; color: white; border: none; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
   .tutorial-pular { background: transparent; color: #94a3b8; border: none; font-size: 11px; cursor: pointer; padding: 6px; white-space: nowrap; }
   .tutorial-highlight { position: fixed; z-index: 88887; border: 3px solid #f97316; border-radius: 12px; pointer-events: none; transition: all 0.4s; }
+
+  /* Popup 100% pago */
+  .popup-parabens-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99990; align-items: center; justify-content: center; padding: 16px; }
+  .popup-parabens-overlay.open { display: flex; }
+  .popup-parabens { background: white; border-radius: 20px; width: 100%; max-width: 360px; overflow: hidden; box-shadow: 0 20px 60px #0004; animation: popIn 0.3s ease; }
+  @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .popup-parabens-topo { background: linear-gradient(135deg, #166534, #15803d); padding: 24px 20px; text-align: center; }
+  .popup-parabens-emoji { font-size: 52px; display: block; margin-bottom: 8px; animation: bounce2 0.6s infinite alternate; }
+  @keyframes bounce2 { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+  .popup-parabens-titulo { font-size: 18px; font-weight: 800; color: white; margin-bottom: 4px; }
+  .popup-parabens-sub { font-size: 12px; color: #bbf7d0; }
+  .popup-parabens-corpo { padding: 20px; text-align: center; }
+  .popup-parabens-texto { font-size: 13px; color: #475569; line-height: 1.6; margin-bottom: 16px; }
+  .popup-parabens-btn-fechar { width: 100%; background: linear-gradient(90deg, #0f3460, #1e3a5f); color: white; border: 2px solid #f97316; border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .popup-parabens-btn-agora-nao { width: 100%; background: transparent; color: #94a3b8; border: none; font-size: 12px; cursor: pointer; padding: 8px; }
+  body.dark .popup-parabens { background: #1e293b; }
+  body.dark .popup-parabens-texto { color: #94a3b8; }
+  body.dark .popup-parabens-btn-agora-nao { color: #475569; }
 </style>
 
 <script type="module">
@@ -354,6 +372,22 @@ window.aplicarFotos = function() {
 </script>
 </head>
 <body>
+
+<!-- POPUP 100% PAGO -->
+<div class="popup-parabens-overlay" id="popup-parabens">
+  <div class="popup-parabens">
+    <div class="popup-parabens-topo">
+      <span class="popup-parabens-emoji">🎉</span>
+      <div class="popup-parabens-titulo">Todas as contas pagas!</div>
+      <div class="popup-parabens-sub">100% do mês em dia 👏</div>
+    </div>
+    <div class="popup-parabens-corpo">
+      <p class="popup-parabens-texto">Que tal fechar o mês e já deixar tudo pronto para o próximo? O histórico será salvo automaticamente.</p>
+      <button class="popup-parabens-btn-fechar" onclick="fecharMesPopup()">🔒 Fechar Mês Agora</button>
+      <button class="popup-parabens-btn-agora-nao" onclick="fecharPopupParabens()">Agora não</button>
+    </div>
+  </div>
+</div>
 
 <!-- SPLASH SCREEN -->
 <div class="splash" id="splash">
@@ -1400,7 +1434,7 @@ function salvarPessoa() {
 function togglePessoa(id) {
   if(dados.mesFechado) return;
   const p=dados.pessoas.find(p=>p.id===id);
-  if(p){p.pago=!p.pago;save();render();showToast(p.pago?p.nome+' pagou!':p.nome+' desmarcado');}
+  if(p){p.pago=!p.pago;save();render();showToast(p.pago?p.nome+' pagou!':p.nome+' desmarcado');if(p.pago)verificarTodosPagos();}
 }
 function deletarPessoa(id) {
   const p=dados.pessoas.find(p=>p.id===id);
@@ -1475,6 +1509,41 @@ function iniciarNovoMes() {
   dados.pessoas=dados.pessoas.map(p=>({...p,pago:false}));
   dados.mesFechado=false;
   save();render();renderGer();showToast('Novo mês iniciado!');
+}
+
+function verificarTodosPagos() {
+  if (dados.mesFechado) return;
+  if (!dados.pessoas.length) return;
+  const todosPagos = dados.pessoas.every(p => p.pago);
+  if (todosPagos) {
+    setTimeout(() => {
+      document.getElementById('popup-parabens').classList.add('open');
+    }, 600);
+  }
+}
+
+function fecharPopupParabens() {
+  document.getElementById('popup-parabens').classList.remove('open');
+}
+
+function fecharMesPopup() {
+  fecharPopupParabens();
+  fecharMes();
+}
+
+function verificarViradaMesAutomatica() {
+  if (!dados.mesFechado) return;
+  const hoje = new Date();
+  if (hoje.getDate() !== 1) return;
+  const casaId = localStorage.getItem('contas_casa_id');
+  const chave = 'virada_auto_' + hoje.getFullYear() + '_' + (hoje.getMonth()+1) + '_' + casaId;
+  if (localStorage.getItem(chave)) return;
+  dados.contas = dados.contas.map(c => ({...c, pago: false}));
+  dados.pessoas = dados.pessoas.map(p => ({...p, pago: false}));
+  dados.mesFechado = false;
+  localStorage.setItem(chave, '1');
+  save(); render(); renderGer();
+  showToast('🚀 Novo mês iniciado automaticamente!');
 }
 
 // === TUTORIAL INTERATIVO ===
@@ -1796,7 +1865,7 @@ function resetarTudo() {
   save();render();renderHistorico();showToast('Histórico apagado!');
 }
 
-function initApp() { load(); updateHeader(); render(); aplicarTema(); setTimeout(mostrarAceiteTermos, 500); setTimeout(verificarSenhaPadrao, 1000); setTimeout(iniciarTutorial, 1500); setTimeout(mostrarBannerInstalar, 4000); }
+function initApp() { load(); updateHeader(); render(); aplicarTema(); verificarViradaMesAutomatica(); setTimeout(mostrarAceiteTermos, 500); setTimeout(verificarSenhaPadrao, 1000); setTimeout(iniciarTutorial, 1500); setTimeout(mostrarBannerInstalar, 4000); }
 
 if (window.fbReady) { initApp(); }
 else {
