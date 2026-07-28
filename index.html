@@ -268,13 +268,15 @@ async function solicitarPermissaoNotificacao(casaIdParam, nomeUsuario) {
     const swReg = await navigator.serviceWorker.ready;
     const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
     if (token && casaIdParam) {
-      const casaDoc = await getDoc(doc(db, 'casas', casaIdParam));
-      const dados = casaDoc.data() || {};
+      const casaSnap = await getDoc(doc(db, 'casas', casaIdParam, 'dados', 'principal'));
+      let dados = {};
+      try { dados = JSON.parse(casaSnap.data().dados || '{}'); } catch {}
       const pessoas = dados.pessoas || [];
       const idx = pessoas.findIndex(p => p.nome === nomeUsuario);
       if (idx !== -1) {
         pessoas[idx].fcmToken = token;
-        await setDoc(doc(db, 'casas', casaIdParam), { pessoas }, { merge: true });
+        dados.pessoas = pessoas;
+        await setDoc(doc(db, 'casas', casaIdParam, 'dados', 'principal'), { dados: JSON.stringify(dados) }, { merge: true });
       }
     }
   } catch(e) { console.log('Notificação não configurada:', e); }
@@ -332,12 +334,14 @@ window.abrirModalNotificacao = abrirModalNotificacao;
 
 async function confirmarNotificacao(casaIdParam) {
   const nome = document.getElementById('select-meu-nome').value;
-  if (!nome) { alert('Selecione seu nome!'); return; }
+  if (!nome) { showToast('Selecione seu nome!'); return; }
   localStorage.setItem('meu_nome_' + casaIdParam, nome);
   document.getElementById('modal-notif').remove();
   await solicitarPermissaoNotificacao(casaIdParam, nome);
   localStorage.setItem('notif_configurada_' + casaIdParam, '1');
   showToast('✅ Lembretes ativados!');
+}
+window.confirmarNotificacao = confirmarNotificacao;
 }
 window.confirmarNotificacao = confirmarNotificacao;
 
