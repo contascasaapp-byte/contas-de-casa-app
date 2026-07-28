@@ -1,4 +1,4 @@
-const CACHE_NAME = 'contas-de-casa-v3';
+const CACHE_NAME = 'contas-de-casa-v4';
 const urlsToCache = [
   '/contas-de-casa-app/',
   '/contas-de-casa-app/index.html',
@@ -24,5 +24,26 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
+  );
+});
+
+// Push notifications
+self.addEventListener('push', event => {
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'Contas de Casa';
+  const options = {
+    body: data.body || 'Você tem contas pendentes!',
+    icon: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/House/3D/house_3d.png',
+    badge: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/House/3D/house_3d.png',
+    vibrate: [200, 100, 200],
+    data: { url: '/contas-de-casa-app/' }
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow(event.notification.data.url || '/contas-de-casa-app/')
   );
 });

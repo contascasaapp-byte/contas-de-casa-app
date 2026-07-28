@@ -243,6 +243,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot, enableNetwork } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDjRzo2yBg6q2rXcicIhEFXff2oPi4lGiM",
@@ -256,6 +257,77 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 enableNetwork(db);
+const messaging = getMessaging(app);
+
+const VAPID_KEY = 'BL86h1gD-vMC19aDj1L_x7VwNiF8buxJgpAMKF9s7xMEaMDVquhsF0ojOc9dq0WuZdTNSfbwwxyzybz9NSTdgrk';
+
+async function solicitarPermissaoNotificacao(casaIdParam, nomeUsuario) {
+  try {
+    const permissao = await Notification.requestPermission();
+    if (permissao !== 'granted') return;
+    const swReg = await navigator.serviceWorker.ready;
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+    if (token && casaIdParam) {
+      const casaDoc = await getDoc(doc(db, 'casas', casaIdParam));
+      const dados = casaDoc.data() || {};
+      const pessoas = dados.pessoas || [];
+      const idx = pessoas.findIndex(p => p.nome === nomeUsuario);
+      if (idx !== -1) {
+        pessoas[idx].fcmToken = token;
+        await setDoc(doc(db, 'casas', casaIdParam), { pessoas }, { merge: true });
+      }
+    }
+  } catch(e) { console.log('Notificação não configurada:', e); }
+}
+
+onMessage(messaging, payload => {
+  const { title, body } = payload.notification || {};
+  if (title) new Notification(title, { body, icon: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/House/3D/house_3d.png' });
+});
+
+async function pedirPermissaoNotificacao(casaIdParam) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'denied') return;
+  const jaConfigurou = localStorage.getItem('notif_configurada_' + casaIdParam);
+  if (jaConfigurou) return;
+  const nomeSalvo = localStorage.getItem('meu_nome_' + casaIdParam);
+  if (nomeSalvo) {
+    await solicitarPermissaoNotificacao(casaIdParam, nomeSalvo);
+    localStorage.setItem('notif_configurada_' + casaIdParam, '1');
+    return;
+  }
+  const casaSnap = await getDoc(doc(db, 'casas', casaIdParam, 'dados', 'principal'));
+  let pessoas = [];
+  try { pessoas = JSON.parse(casaSnap.data().dados || '{}').pessoas || []; } catch {}
+  if (pessoas.length === 0) return;
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;max-width:320px;width:90%;text-align:center">
+      <div style="font-size:2rem;margin-bottom:8px">🔔</div>
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;color:#0f3460">Ativar lembretes de pagamento</h3>
+      <p style="font-size:13px;color:#64748b;margin-bottom:16px">Quem é você? Vamos te lembrar quando tiver contas pendentes.</p>
+      <select id="select-meu-nome" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:16px">
+        <option value="">Selecione seu nome...</option>
+        ${pessoas.map(p => `<option value="${p.nome}">${p.nome}</option>`).join('')}
+      </select>
+      <button onclick="confirmarNotificacao('${casaIdParam}')" style="width:100%;background:#f97316;color:white;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px">Ativar lembretes</button>
+      <button onclick="document.getElementById('modal-notif').remove()" style="width:100%;background:transparent;color:#94a3b8;border:none;padding:8px;font-size:13px;cursor:pointer">Agora não</button>
+    </div>`;
+  modal.id = 'modal-notif';
+  document.body.appendChild(modal);
+}
+
+async function confirmarNotificacao(casaIdParam) {
+  const nome = document.getElementById('select-meu-nome').value;
+  if (!nome) { alert('Selecione seu nome!'); return; }
+  localStorage.setItem('meu_nome_' + casaIdParam, nome);
+  document.getElementById('modal-notif').remove();
+  await solicitarPermissaoNotificacao(casaIdParam, nome);
+  localStorage.setItem('notif_configurada_' + casaIdParam, '1');
+  showToast('✅ Lembretes ativados!');
+}
+window.confirmarNotificacao = confirmarNotificacao;
 
 let casaId = null;
 let docRef = null;
@@ -960,6 +1032,7 @@ async function verificarSenha() {
       await window.iniciarCasa(casaIdPendente);
       casaIdPendente = null;
       initApp();
+      setTimeout(() => pedirPermissaoNotificacao(casaId), 2000);
     } else {
       document.getElementById('senha-erro').style.display = 'block';
     }
