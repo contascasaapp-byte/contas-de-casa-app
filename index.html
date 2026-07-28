@@ -267,17 +267,8 @@ async function solicitarPermissaoNotificacao(casaIdParam, nomeUsuario) {
     if (permissao !== 'granted') return;
     const swReg = await navigator.serviceWorker.ready;
     const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
-    if (token && casaIdParam) {
-      const casaSnap = await getDoc(doc(db, 'casas', casaIdParam, 'dados', 'principal'));
-      let dados = {};
-      try { dados = JSON.parse(casaSnap.data().dados || '{}'); } catch {}
-      const pessoas = dados.pessoas || [];
-      const idx = pessoas.findIndex(p => p.nome === nomeUsuario);
-      if (idx !== -1) {
-        pessoas[idx].fcmToken = token;
-        dados.pessoas = pessoas;
-        await setDoc(doc(db, 'casas', casaIdParam, 'dados', 'principal'), { dados: JSON.stringify(dados) }, { merge: true });
-      }
+    if (token && casaIdParam && nomeUsuario) {
+      await setDoc(doc(db, 'casas', casaIdParam, 'dados', 'tokens'), { [nomeUsuario]: token }, { merge: true });
     }
   } catch(e) { console.log('Notificação não configurada:', e); }
 }
@@ -340,8 +331,6 @@ async function confirmarNotificacao(casaIdParam) {
   await solicitarPermissaoNotificacao(casaIdParam, nome);
   localStorage.setItem('notif_configurada_' + casaIdParam, '1');
   showToast('✅ Lembretes ativados!');
-}
-window.confirmarNotificacao = confirmarNotificacao;
 }
 window.confirmarNotificacao = confirmarNotificacao;
 
