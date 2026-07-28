@@ -1058,7 +1058,6 @@ async function verificarSenha() {
       await window.iniciarCasa(casaIdPendente);
       casaIdPendente = null;
       initApp();
-      setTimeout(() => pedirPermissaoNotificacao(casaId), 2000);
     } else {
       document.getElementById('senha-erro').style.display = 'block';
     }
