@@ -1972,7 +1972,7 @@ function resetarTudo() {
   save();render();renderHistorico();showToast('Histórico apagado!');
 }
 
-function initApp() { load(); updateHeader(); render(); aplicarTema(); verificarViradaMesAutomatica(); setTimeout(mostrarAceiteTermos, 500); setTimeout(verificarSenhaPadrao, 1000); setTimeout(iniciarTutorial, 1500); setTimeout(mostrarBannerInstalar, 4000); }
+function initApp() { load(); updateHeader(); render(); aplicarTema(); verificarViradaMesAutomatica(); setTimeout(mostrarAceiteTermos, 500); setTimeout(verificarSenhaPadrao, 1000); setTimeout(iniciarTutorial, 1500); setTimeout(mostrarBannerInstalar, 4000); setTimeout(() => { if (casaId) pedirPermissaoNotificacao(casaId); }, 5000); }
 
 if (window.fbReady) { initApp(); }
 else {
