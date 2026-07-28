@@ -1953,17 +1953,33 @@ function verComoInstalar() {
 }
 
 function trocarCasa() {
-  if (!confirm('Deseja sair desta casa e entrar em outra?')) return;
-  const casaId = localStorage.getItem('contas_casa_id');
-  // Limpa tudo relacionado a esta casa
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:99999';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;max-width:300px;width:90%;text-align:center">
+      <div style="font-size:2rem;margin-bottom:8px">🚪</div>
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;color:#0f3460">Trocar de casa</h3>
+      <p style="font-size:13px;color:#64748b;margin-bottom:16px">Deseja sair desta casa e entrar em outra?</p>
+      <button onclick="confirmarTrocarCasa()" style="width:100%;background:#ef4444;color:white;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px">Sim, trocar</button>
+      <button onclick="document.getElementById('modal-trocar-casa').remove()" style="width:100%;background:transparent;color:#94a3b8;border:none;padding:8px;font-size:13px;cursor:pointer">Cancelar</button>
+    </div>`;
+  modal.id = 'modal-trocar-casa';
+  document.body.appendChild(modal);
+}
+
+function confirmarTrocarCasa() {
+  const id = localStorage.getItem('contas_casa_id');
   localStorage.removeItem('contas_casa_id');
-  if (casaId) {
-    localStorage.removeItem('loginEm_' + casaId);
-    localStorage.removeItem('tutorial_' + casaId);
+  if (id) {
+    localStorage.removeItem('loginEm_' + id);
+    localStorage.removeItem('tutorial_' + id);
+    localStorage.removeItem('notif_configurada_' + id);
+    localStorage.removeItem('notif_banner_fechado_' + id);
+    localStorage.removeItem('meu_nome_' + id);
   }
-  // Redireciona para a tela de entrada
   window.location.href = window.location.pathname;
 }
+window.confirmarTrocarCasa = confirmarTrocarCasa;
 
 function abrirModalNomeCasa() {
   document.getElementById('input-nome-casa').value = dados.nomeCasa || '';
