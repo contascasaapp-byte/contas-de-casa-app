@@ -454,6 +454,19 @@ window.aplicarFotos = function() {
       <div id="sucesso-codigo" style="background:#f1f5f9;border:2px dashed #0f3460;border-radius:12px;padding:16px;font-size:28px;font-weight:800;color:#0f3460;letter-spacing:6px;margin-bottom:12px"></div>
       <div id="sucesso-link" style="font-size:11px;color:#64748b;margin-bottom:12px;word-break:break-all"></div>
       <button class="entrada-btn" onclick="copiarCodigo()">Copiar código</button>
+
+      <!-- ENVIO WHATSAPP -->
+      <div id="bloco-whatsapp" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;margin:12px 0;text-align:left">
+        <div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">📲 Enviar acesso ao cliente</div>
+        <label style="font-size:11px;color:#475569;display:block;margin-bottom:4px">Nome do cliente</label>
+        <input class="entrada-input" type="text" id="input-cliente-nome" placeholder="Ex: Maria" style="letter-spacing:0;font-size:14px;text-align:left;margin-bottom:8px"/>
+        <label style="font-size:11px;color:#475569;display:block;margin-bottom:4px">WhatsApp do cliente (com DDD)</label>
+        <input class="entrada-input" type="tel" id="input-cliente-whats" placeholder="Ex: 11999990000" style="letter-spacing:0;font-size:14px;text-align:left;margin-bottom:10px"/>
+        <button class="entrada-btn" onclick="enviarWhatsApp()" style="background:#25D366;margin-bottom:0">
+          <span style="font-size:16px">💬</span> Enviar pelo WhatsApp
+        </button>
+      </div>
+
       <button class="entrada-btn-sec" id="btn-entrar-sucesso" onclick="entrarComSucesso()">Entrar na casa</button>
       <button class="entrada-btn-sec" id="btn-nova-casa-sucesso" onclick="mostrarCriar()" style="display:none">+ Criar outra casa</button>
     </div>
@@ -1008,6 +1021,40 @@ async function criarCasa() {
 function copiarCodigo() {
   const codigo = document.getElementById('sucesso-codigo').textContent;
   navigator.clipboard.writeText(codigo).then(() => showToast('Código copiado!')).catch(() => prompt('Copie:', codigo));
+}
+
+function enviarWhatsApp() {
+  const nome = document.getElementById('input-cliente-nome').value.trim();
+  const numero = document.getElementById('input-cliente-whats').value.trim().replace(/\D/g, '');
+  const codigo = document.getElementById('sucesso-codigo').textContent.trim();
+  const link = document.getElementById('sucesso-link').textContent.trim();
+  const senha = document.getElementById('input-casa-senha') ? document.getElementById('input-casa-senha').value.trim() : '12345';
+  const senhaEnvio = senha || '12345';
+
+  if (!numero) { showToast('Informe o WhatsApp do cliente!'); return; }
+
+  const saudacao = nome ? `Olá, ${nome}! 👋` : 'Olá! 👋';
+
+  const msg =
+`${saudacao}
+
+Aqui estão seus dados de acesso ao *Contas de Casa* 🏠
+
+🔑 *Código da casa:* ${codigo}
+👤 *Usuário:* Morador 1
+🔒 *Senha:* ${senhaEnvio}
+
+📲 *Acesse pelo link:*
+${link}
+
+1️⃣ Abra o link acima
+2️⃣ Digite o código da casa: *${codigo}*
+3️⃣ Faça login com a senha e troque para uma senha pessoal
+
+Qualquer dúvida é só chamar! 😊`;
+
+  const url = `https://wa.me/55${numero}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
 }
 
 function entrarComSucesso() {
