@@ -1033,25 +1033,24 @@ function enviarWhatsApp() {
 
   if (!numero) { showToast('Informe o WhatsApp do cliente!'); return; }
 
-  const saudacao = nome ? `Olá, ${nome}! 👋` : 'Olá! 👋';
+  const saudacao = nome ? `Ola, ${nome}! 👋` : 'Ola! 👋';
 
   const msg =
 `${saudacao}
 
-Aqui estão seus dados de acesso ao *Contas de Casa* 🏠
+Aqui estao seus dados de acesso ao *Contas de Casa* 🏠
 
-🔑 *Código da casa:* ${codigo}
-👤 *Usuário:* Morador 1
-🔒 *Senha:* ${senhaEnvio}
+✅ *Codigo da casa:* ${codigo}
+✅ *Senha:* ${senhaEnvio}
 
-📲 *Acesse pelo link:*
+Acesse pelo link:
 ${link}
 
-1️⃣ Abra o link acima
-2️⃣ Digite o código da casa: *${codigo}*
-3️⃣ Faça login com a senha e troque para uma senha pessoal
+1. Abra o link acima
+2. Digite o codigo: *${codigo}*
+3. Entre com a senha e troque para uma senha pessoal
 
-Qualquer dúvida é só chamar! 😊`;
+Qualquer duvida e so chamar! 😊`;
 
   const url = `https://wa.me/55${numero}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
